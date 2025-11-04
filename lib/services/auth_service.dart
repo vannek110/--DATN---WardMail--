@@ -5,7 +5,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: [
+      'email',
+      'https://www.googleapis.com/auth/gmail.readonly',
+    ],
+  );
 
   Future<Map<String, dynamic>?> signInWithGoogle() async {
     try {
@@ -31,6 +36,8 @@ class AuthService {
           'email': user.email,
           'displayName': user.displayName,
           'photoUrl': user.photoURL,
+          'loginMethod': 'google',
+          'accessToken': googleAuth.accessToken,
         };
         await _saveUserData(userData);
         return userData;
@@ -49,6 +56,14 @@ class AuthService {
   }
 
   Future<Map<String, dynamic>?> getCurrentUser() async {
+    // Always get from SharedPreferences to preserve loginMethod
+    final prefs = await SharedPreferences.getInstance();
+    final userDataString = prefs.getString('user_data');
+    if (userDataString != null) {
+      return jsonDecode(userDataString);
+    }
+    
+    // Fallback to Firebase user
     final User? user = _auth.currentUser;
     if (user != null) {
       return {
@@ -59,11 +74,6 @@ class AuthService {
       };
     }
     
-    final prefs = await SharedPreferences.getInstance();
-    final userDataString = prefs.getString('user_data');
-    if (userDataString != null) {
-      return jsonDecode(userDataString);
-    }
     return null;
   }
 
@@ -107,6 +117,7 @@ class AuthService {
           'displayName': displayName,
           'photoUrl': user.photoURL,
           'emailVerified': user.emailVerified,
+          'loginMethod': 'email',
         };
         
         await _saveUserData(userData);
@@ -139,6 +150,7 @@ class AuthService {
           'displayName': user.displayName,
           'photoUrl': user.photoURL,
           'emailVerified': user.emailVerified,
+          'loginMethod': 'email',
         };
         
         await _saveUserData(userData);
@@ -184,6 +196,27 @@ class AuthService {
     } catch (error) {
       print('Error sending password reset email: $error');
       rethrow;
+    }
+  }
+
+  // Check login method
+  Future<String?> getLoginMethod() async {
+    final userData = await getCurrentUser();
+    return userData?['loginMethod'] as String?;
+  }
+
+  // Get Google Access Token for Gmail API
+  Future<String?> getGoogleAccessToken() async {
+    try {
+      final GoogleSignInAccount? account = await _googleSignIn.signInSilently();
+      if (account != null) {
+        final GoogleSignInAuthentication auth = await account.authentication;
+        return auth.accessToken;
+      }
+      return null;
+    } catch (error) {
+      print('Error getting Google access token: $error');
+      return null;
     }
   }
 }
