@@ -200,28 +200,28 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF4285F4), Color(0xFF34A853)],
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.shield, color: Colors.white, size: 18),
-            ),
-            const SizedBox(width: 10),
-            const Flexible(
-              child: Text(
-                'Phát hiện Phishing',
-                style: TextStyle(
-                  color: Color(0xFF202124),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 18,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
+            // Container(
+            //   padding: const EdgeInsets.all(6),
+            //   decoration: BoxDecoration(
+            //     gradient: const LinearGradient(
+            //       colors: [Color(0xFF4285F4), Color(0xFF34A853)],
+            //     ),
+            //     borderRadius: BorderRadius.circular(8),
+            //   ),
+            //   child: const Icon(Icons.shield, color: Colors.white, size: 18),
+            // ),
+            // const SizedBox(width: 10),
+            // const Flexible(
+            //   child: Text(
+            //     'Phát hiện Phishing',
+            //     style: TextStyle(
+            //       color: Color(0xFF202124),
+            //       fontWeight: FontWeight.w600,
+            //       fontSize: 18,
+            //     ),
+            //     overflow: TextOverflow.ellipsis,
+            //   ),
+            // ),
           ],
         ),
         elevation: 0,
