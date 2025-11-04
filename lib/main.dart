@@ -6,6 +6,7 @@ import 'screens/home_screen.dart';
 import 'screens/email_register_screen.dart';
 import 'screens/email_login_screen.dart';
 import 'screens/email_verification_screen.dart';
+import 'screens/biometric_lock_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +34,7 @@ class MyApp extends StatelessWidget {
         '/email-register': (context) => const EmailRegisterScreen(),
         '/email-login': (context) => const EmailLoginScreen(),
         '/email-verification': (context) => const EmailVerificationScreen(),
+        '/biometric-lock': (context) => const BiometricLockScreen(),
       },
     );
   }

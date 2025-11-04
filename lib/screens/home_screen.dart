@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/biometric_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -10,8 +11,11 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final AuthService _authService = AuthService();
+  final BiometricService _biometricService = BiometricService();
   Map<String, dynamic>? _userData;
   bool _isLoading = true;
+  bool _biometricAvailable = false;
+  bool _biometricEnabled = false;
 
   @override
   void initState() {
@@ -21,10 +25,52 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadUserData() async {
     final data = await _authService.getCurrentUser();
+    final biometricAvailable = await _biometricService.isBiometricAvailable();
+    final biometricEnabled = await _biometricService.isBiometricEnabled();
+    
     setState(() {
       _userData = data;
+      _biometricAvailable = biometricAvailable;
+      _biometricEnabled = biometricEnabled;
       _isLoading = false;
     });
+  }
+
+  Future<void> _toggleBiometric(bool value) async {
+    if (value) {
+      final result = await _biometricService.authenticate();
+      if (!result.success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.errorMessage ?? 'Xác thực thất bại'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+        return;
+      }
+    }
+
+    await _biometricService.setBiometricEnabled(value);
+    
+    if (mounted) {
+      setState(() {
+        _biometricEnabled = value;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            value
+                ? 'Đã bật xác thực vân tay'
+                : 'Đã tắt xác thực vân tay',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   Future<void> _handleSignOut() async {
@@ -119,6 +165,24 @@ class _HomeScreenState extends State<HomeScreen> {
                           ? 'Bạn đã đăng nhập bằng Google' 
                           : 'Bạn đã đăng nhập bằng Email'),
                       ),
+                      if (_biometricAvailable) ...[
+                        const Divider(),
+                        SwitchListTile(
+                          secondary: Icon(
+                            Icons.fingerprint,
+                            color: _biometricEnabled ? Colors.deepPurple : Colors.grey,
+                          ),
+                          title: const Text('Xác thực vân tay'),
+                          subtitle: Text(
+                            _biometricEnabled
+                                ? 'Yêu cầu vân tay khi mở app'
+                                : 'Tắt bảo mật vân tay',
+                          ),
+                          value: _biometricEnabled,
+                          onChanged: _toggleBiometric,
+                          activeColor: Colors.deepPurple,
+                        ),
+                      ],
                     ],
                   ),
                 ),
