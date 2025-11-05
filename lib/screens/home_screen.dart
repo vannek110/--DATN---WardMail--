@@ -154,7 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     _toggleBiometric(value);
                     Navigator.pop(context);
                   },
-                  activeColor: Colors.deepPurple,
+                  activeThumbColor: Colors.deepPurple,
                 ),
               ),
               const SizedBox(height: 16),

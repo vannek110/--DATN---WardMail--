@@ -43,3 +43,19 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+
+# Thêm phần này vào cuối file .gitignore
+
+# ---------------------------------------------
+# Loai tru code chuc nang da phat trien (De team members commit sau)
+# ---------------------------------------------
+
+# Loai tru toan bo cac thu muc chua code chuc nang
+lib/models/
+lib/screens/
+lib/services/
+
+# Bat buoc GIU LAI cac file co ban de du an chay duoc
+!lib/main.dart
+!lib/test/
