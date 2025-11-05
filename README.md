@@ -185,6 +185,7 @@ This project is developed for educational and research purposes.
 ## 👨‍💻 Author
 
 **Team 2**
+- Email: vannek1100@gmail.com
 - Email: datlecong156@gmail.com
 
 
