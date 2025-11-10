@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/biometric_service.dart';
+import '../services/notification_service.dart';
 import 'email_list_screen.dart';
+import 'notification_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,15 +15,24 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final AuthService _authService = AuthService();
   final BiometricService _biometricService = BiometricService();
+  final NotificationService _notificationService = NotificationService();
   Map<String, dynamic>? _userData;
   bool _isLoading = true;
   bool _biometricAvailable = false;
   bool _biometricEnabled = false;
+  int _unreadNotificationCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _loadNotificationCount();
+  }
+
+  void _loadNotificationCount() {
+    setState(() {
+      _unreadNotificationCount = _notificationService.getUnreadCount();
+    });
   }
 
   Future<void> _loadUserData() async {
@@ -99,6 +110,66 @@ class _HomeScreenState extends State<HomeScreen> {
       await _authService.signOut();
       Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
     }
+  }
+
+  void _showTestNotificationDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Test Thông báo'),
+        content: const Text('Chọn loại thông báo để test:'),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _notificationService.showNotification(
+                title: '🚨 Phát hiện email phishing!',
+                body: 'Email từ unknown@suspicious.com có dấu hiệu lừa đảo',
+                type: 'phishing',
+              );
+              _loadNotificationCount();
+            },
+            child: const Text('Phishing'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _notificationService.showNotification(
+                title: '✅ Email an toàn',
+                body: 'Email từ support@google.com đã được kiểm tra và an toàn',
+                type: 'safe',
+              );
+              _loadNotificationCount();
+            },
+            child: const Text('An toàn'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _notificationService.showNotification(
+                title: '📧 Hoàn thành kiểm tra',
+                body: 'Đã kiểm tra 5 email mới, phát hiện 1 email nguy hiểm',
+                type: 'scan_complete',
+              );
+              _loadNotificationCount();
+            },
+            child: const Text('Hoàn thành'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _notificationService.showNotification(
+                title: '🔐 Cảnh báo bảo mật',
+                body: 'Phát hiện hoạt động đăng nhập bất thường từ thiết bị mới',
+                type: 'security',
+              );
+              _loadNotificationCount();
+            },
+            child: const Text('Bảo mật'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showSettingsBottomSheet() {
@@ -227,10 +298,49 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Color(0xFF5F6368)),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
-            tooltip: 'Thông báo',
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications_outlined),
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationScreen(),
+                    ),
+                  );
+                  _loadNotificationCount();
+                },
+                tooltip: 'Thông báo',
+              ),
+              if (_unreadNotificationCount > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      _unreadNotificationCount > 9
+                          ? '9+'
+                          : '$_unreadNotificationCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
           ),
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -363,6 +473,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     leading: const Icon(Icons.help_outline, color: Colors.grey),
                     title: const Text('Trợ giúp'),
                     onTap: () {},
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.bug_report, color: Colors.orange),
+                    title: const Text('Test Thông báo'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showTestNotificationDialog();
+                    },
                   ),
                 ],
               ),

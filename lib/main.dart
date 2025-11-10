@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'services/notification_service.dart';
 import 'screens/auth_wrapper.dart';
 import 'screens/google_login_screen.dart';
 import 'screens/home_screen.dart';
@@ -11,6 +12,7 @@ import 'screens/biometric_lock_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await NotificationService().initialize();
   runApp(const MyApp());
 }
 
