@@ -50,7 +50,7 @@ dependencies:
   csv: ^6.0.0
   fl_chart: ^0.68.0
   share_plus: ^7.2.1
-  google_generative_ai: ^0.4.6
+  google_generative_ai: ^0.4.7
 
 dev_dependencies:
   flutter_test:

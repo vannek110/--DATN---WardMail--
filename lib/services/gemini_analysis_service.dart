@@ -12,12 +12,6 @@ class GeminiAnalysisService {
     _model = GenerativeModel(
       model: 'gemini-2.5-flash',
       apiKey: _apiKey,
-      generationConfig: GenerationConfig(
-        temperature: 0.3,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 2048,
-      ),
     );
   }
 
@@ -28,20 +22,32 @@ class GeminiAnalysisService {
     required String anonymizedFrom,
   }) async {
     try {
+      print('=== GEMINI ANALYSIS START ===');
+      print('Subject: ${anonymizedSubject.substring(0, anonymizedSubject.length > 50 ? 50 : anonymizedSubject.length)}...');
+      
       final prompt = _buildAnalysisPrompt(
         subject: anonymizedSubject,
         body: anonymizedBody,
         from: anonymizedFrom,
       );
 
+      print('Sending request to Gemini...');
       final response = await _model.generateContent([Content.text(prompt)]);
       
+      print('Response received!');
+      print('Response text length: ${response.text?.length ?? 0}');
+      
       if (response.text == null || response.text!.isEmpty) {
+        print('ERROR: Empty response from Gemini');
         throw Exception('Không nhận được phản hồi từ Gemini AI');
       }
 
+      print('Parsing response...');
       return _parseGeminiResponse(response.text!);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('=== GEMINI ERROR ===');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
       throw Exception('Lỗi khi phân tích với Gemini: $e');
     }
   }
@@ -52,62 +58,36 @@ class GeminiAnalysisService {
     required String from,
   }) {
     return '''
-Bạn là chuyên gia an ninh mạng chuyên phát hiện email lừa đảo (phishing). 
-Hãy phân tích email sau đây và đánh giá mức độ nguy hiểm.
+Phân tích email phishing. Trả về ĐÚNG format JSON dưới đây, KHÔNG thêm text nào khác.
 
-LƯU Ý: Email này đã được làm mờ dữ liệu cá nhân để bảo vệ privacy.
+**LƯU Ý:** Tiêu đề và nội dung email đã được làm mờ thông tin cá nhân. Địa chỉ người gửi GIỮ NGUYÊN để bạn phân tích domain.
 
-**THÔNG TIN EMAIL:**
-Người gửi: $from
+Người gửi: $from (DOMAIN THẬT - phân tích kỹ)
 Tiêu đề: $subject
-Nội dung:
-$body
+Nội dung: $body
 
-**YÊU CẦU PHÂN TÍCH:**
-Đánh giá email theo các tiêu chí sau và trả về kết quả dưới dạng JSON:
-
-1. **Điểm số tổng thể (riskScore):** Từ 0-100
-   - 0-30: An toàn (safe)
-   - 31-60: Nghi ngờ (suspicious)
-   - 61-100: Nguy hiểm/Phishing (phishing)
-
-2. **Phân loại (classification):** "safe", "suspicious", hoặc "phishing"
-
-3. **Mức độ tin cậy (confidence):** Từ 0-100 (độ chắc chắn của phân tích)
-
-4. **Lý do chi tiết (reasons):** Danh sách các lý do cụ thể
-
-5. **Dấu hiệu phishing (phishingIndicators):** Danh sách các dấu hiệu phát hiện được
-
-6. **Khuyến nghị (recommendations):** Các hành động nên làm
-
-**ĐỊNH DẠNG TRẢ VỀ (JSON):**
+Trả về JSON theo format SAU (KHÔNG thêm markdown, KHÔNG thêm text):
 {
-  "riskScore": <số từ 0-100>,
-  "classification": "<safe|suspicious|phishing>",
-  "confidence": <số từ 0-100>,
-  "reasons": [
-    "Lý do 1",
-    "Lý do 2"
-  ],
-  "phishingIndicators": [
-    "Dấu hiệu 1",
-    "Dấu hiệu 2"
-  ],
-  "recommendations": [
-    "Khuyến nghị 1",
-    "Khuyến nghị 2"
-  ],
-  "detailedAnalysis": {
-    "sender": "<phân tích người gửi>",
-    "subject": "<phân tích tiêu đề>",
-    "content": "<phân tích nội dung>",
-    "urgency": "<mức độ khẩn cấp>",
-    "legitimacy": "<tính hợp pháp>"
-  }
+  "risk_score": 15,
+  "risk_level": "Low",
+  "summary": "Email an toàn từ tổ chức giáo dục",
+  "detailed_analysis": {
+    "sender_analysis": "Domain giáo dục hợp pháp",
+    "content_analysis": "Thông báo chính thức về lịch học",
+    "technical_analysis": "Không có link nguy hiểm",
+    "context_analysis": "Email thông báo học tập bình thường"
+  },
+  "red_flags": [],
+  "recommendations": ["Email an toàn, có thể đọc"]
 }
 
-Chỉ trả về JSON, không kèm thêm text nào khác.
+Đánh giá risk_score:
+- 0-25: Low (email an toàn)
+- 26-50: Medium (có dấu hiệu đáng ngờ)  
+- 51-75: High (nhiều dấu hiệu lừa đảo)
+- 76-100: Critical (chắc chắn phishing)
+
+CHỈ trả về JSON, không thêm gì khác.
 ''';
   }
 
@@ -126,29 +106,63 @@ Chỉ trả về JSON, không kèm thêm text nào khác.
       }
       jsonText = jsonText.trim();
 
+      // Log để debug
+      print('Gemini JSON Response: ${jsonText.substring(0, jsonText.length > 500 ? 500 : jsonText.length)}...');
+
       final Map<String, dynamic> json = jsonDecode(jsonText);
 
+      // Parse với format mới (risk_score, risk_level, red_flags)
+      final riskScore = (json['risk_score'] ?? json['riskScore'] ?? 0).toDouble();
+      final riskLevel = json['risk_level'] ?? json['classification'] ?? 'unknown';
+      
+      // Convert risk_level to classification
+      String classification = 'unknown';
+      if (riskLevel == 'Low') {
+        classification = 'safe';
+      } else if (riskLevel == 'Medium') {
+        classification = 'suspicious';
+      } else if (riskLevel == 'High' || riskLevel == 'Critical') {
+        classification = 'phishing';
+      }
+
+      // Parse detailed_analysis
+      Map<String, String> detailedAnalysis = {};
+      if (json['detailed_analysis'] != null) {
+        final analysis = json['detailed_analysis'];
+        detailedAnalysis = {
+          'sender': analysis['sender_analysis']?.toString() ?? '',
+          'content': analysis['content_analysis']?.toString() ?? '',
+          'technical': analysis['technical_analysis']?.toString() ?? '',
+          'context': analysis['context_analysis']?.toString() ?? '',
+        };
+      }
+
+      // Parse reasons từ summary nếu có
+      List<String> reasons = [];
+      if (json['summary'] != null) {
+        reasons.add(json['summary'].toString());
+      }
+
       return GeminiAnalysisResult(
-        riskScore: (json['riskScore'] ?? 0).toDouble(),
-        classification: json['classification'] ?? 'unknown',
-        confidence: (json['confidence'] ?? 0).toDouble(),
-        reasons: json['reasons'] != null 
-            ? List<String>.from(json['reasons']) 
-            : [],
-        phishingIndicators: json['phishingIndicators'] != null
-            ? List<String>.from(json['phishingIndicators'])
+        riskScore: riskScore,
+        classification: classification,
+        confidence: 85.0, // Giá trị mặc định vì format mới không có confidence
+        reasons: reasons,
+        phishingIndicators: json['red_flags'] != null
+            ? List<String>.from(json['red_flags'])
             : [],
         recommendations: json['recommendations'] != null
             ? List<String>.from(json['recommendations'])
             : [],
-        detailedAnalysis: json['detailedAnalysis'] != null
-            ? Map<String, String>.from(json['detailedAnalysis'].map(
-                (key, value) => MapEntry(key.toString(), value.toString())
-              ))
-            : {},
+        detailedAnalysis: detailedAnalysis,
         rawResponse: responseText,
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      // Log chi tiết để debug
+      print('Error parsing Gemini response: $e');
+      print('Stack trace: $stackTrace');
+      print('Raw response: ${responseText.substring(0, responseText.length > 1000 ? 1000 : responseText.length)}');
+      
       // Nếu không parse được JSON, trả về kết quả mặc định
       return GeminiAnalysisResult(
         riskScore: 50,
@@ -163,30 +177,19 @@ Chỉ trả về JSON, không kèm thêm text nào khác.
     }
   }
 
-  /// Phân tích nhanh với prompt ngắn gọn hơn
-  Future<GeminiAnalysisResult> quickAnalyze({
-    required String subject,
-    required String from,
-  }) async {
+  /// Test Gemini API connection
+  Future<bool> testConnection() async {
     try {
-      final prompt = '''
-Phân tích nhanh email phishing:
-Từ: $from
-Tiêu đề: $subject
-
-Trả về JSON với: riskScore (0-100), classification (safe/suspicious/phishing), reasons (array).
-Chỉ trả JSON, không text khác.
-''';
-
-      final response = await _model.generateContent([Content.text(prompt)]);
+      print('Testing Gemini API connection...');
+      final response = await _model.generateContent([
+        Content.text('Reply with just: {"status": "ok"}')
+      ]);
       
-      if (response.text == null || response.text!.isEmpty) {
-        throw Exception('Không nhận được phản hồi');
-      }
-
-      return _parseGeminiResponse(response.text!);
+      print('Test response: ${response.text}');
+      return response.text != null && response.text!.isNotEmpty;
     } catch (e) {
-      throw Exception('Lỗi phân tích nhanh: $e');
+      print('Test connection failed: $e');
+      return false;
     }
   }
 }

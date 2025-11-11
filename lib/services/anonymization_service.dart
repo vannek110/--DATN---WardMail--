@@ -18,9 +18,9 @@ class AnonymizationService {
 
   // Danh sách tên giả để thay thế
   final List<String> _fakeNames = [
-    'Nguyễn Văn A', 'Trần Thị B', 'Lê Văn C', 'Phạm Thị D',
-    'Hoàng Văn E', 'Phan Thị F', 'Vũ Văn G', 'Đặng Thị H',
-    'Bùi Văn I', 'Đỗ Thị K', 'Hồ Văn L', 'Ngô Thị M',
+    'Nguyễn Văn Đông', 'Trần Thị Trang', 'Lê Văn Cường', 'Phạm Thị Dương',
+    'Hoàng Văn Em', 'Phan Thị Phương', 'Vũ Văn Giang', 'Đặng Thị Hạnh',
+    'Bùi Văn Hùng', 'Đỗ Thị Kim', 'Hồ Văn Long', 'Ngô Thị Mai',
   ];
 
   /// Bước 1: Nhận email gốc và xử lý
@@ -32,12 +32,13 @@ class AnonymizationService {
     // Bước 2: Tiền xử lý văn bản
     final processedSubject = _preprocessText(subject);
     final processedBody = _preprocessText(body);
-    final processedFrom = _preprocessText(from);
 
     // Bước 3-5: Nhận diện thực thể, tạo dữ liệu giả, và làm mờ
     final anonymizedSubject = _maskEntities(processedSubject);
     final anonymizedBody = _maskEntities(processedBody);
-    final anonymizedFrom = _maskEntities(processedFrom);
+    
+    // KHÔNG làm mờ địa chỉ người gửi - giữ nguyên để Gemini phân tích domain
+    final anonymizedFrom = from;
 
     return {
       'subject': anonymizedSubject,

@@ -214,10 +214,11 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Độ tin cậy: ${(_scanResult!.confidenceScore * 100).toInt()}%',
+                      _getConfidenceLabel(),
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey[700],
+                        fontWeight: FontWeight.bold,
+                        color: statusColor,
                       ),
                     ),
                   ],
@@ -255,27 +256,36 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
               spacing: 8,
               runSpacing: 8,
               children: _scanResult!.detectedThreats.map((threat) => 
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.red[50],
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.red[200]!),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.bug_report, size: 14, color: Colors.red[700]),
-                      const SizedBox(width: 4),
-                      Text(
-                        threat,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.red[900],
-                          fontWeight: FontWeight.w500,
+                GestureDetector(
+                  onTap: () => _showThreatDetail(threat),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.red[200]!),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.bug_report, size: 14, color: Colors.red[700]),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            threat,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.red[900],
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        Icon(Icons.touch_app, size: 12, color: Colors.red[400]),
+                      ],
+                    ),
                   ),
                 ),
               ).toList(),
@@ -399,6 +409,25 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
     final reasons = geminiData['reasons'] as List<dynamic>? ?? [];
     final recommendations = geminiData['recommendations'] as List<dynamic>? ?? [];
     final detailedAnalysis = geminiData['detailedAnalysis'] as Map<String, dynamic>? ?? {};
+    
+    // Lấy risk score và xác định màu sắc
+    final riskScore = geminiData['riskScore']?.toInt() ?? 0;
+    Color scoreColor;
+    Color scoreBgColor;
+    
+    if (riskScore >= 70) {
+      // Nguy hiểm (70-100)
+      scoreColor = Colors.white;
+      scoreBgColor = const Color(0xFFEA4335); // Đỏ
+    } else if (riskScore >= 40) {
+      // Nghi ngờ (40-69)
+      scoreColor = Colors.black87;
+      scoreBgColor = const Color(0xFFFBBC04); // Vàng
+    } else {
+      // An toàn (0-39)
+      scoreColor = Colors.white;
+      scoreBgColor = const Color(0xFF34A853); // Xanh
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -427,13 +456,13 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.purple[700],
+                  color: scoreBgColor,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${geminiData['riskScore']?.toInt() ?? 0}/100',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  '$riskScore/100',
+                  style: TextStyle(
+                    color: scoreColor,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),
@@ -558,5 +587,61 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
         ],
       ],
     );
+  }
+
+  void _showThreatDetail(String threat) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.bug_report, color: Colors.red[700], size: 24),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Chi tiết mối đe dọa',
+                  style: TextStyle(fontSize: 18),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Text(
+              threat,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[800],
+                height: 1.5,
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Đóng'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  String _getConfidenceLabel() {
+    final confidencePercent = (_scanResult!.confidenceScore * 100).toInt();
+    
+    if (_scanResult!.isPhishing) {
+      // Email nguy hiểm → hiển thị "Độ nguy hiểm"
+      return 'Độ nguy hiểm: $confidencePercent%';
+    } else if (_scanResult!.isSuspicious) {
+      // Email nghi ngờ → hiển thị "Mức độ nghi ngờ"
+      return 'Mức độ nghi ngờ: $confidencePercent%';
+    } else {
+      // Email an toàn → hiển thị "Độ an toàn"
+      return 'Độ an toàn: $confidencePercent%';
+    }
   }
 }

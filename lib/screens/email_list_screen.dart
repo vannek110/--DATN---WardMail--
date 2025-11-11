@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/email_message.dart';
 import '../services/gmail_service.dart';
 import '../services/auth_service.dart';
+import '../services/scan_history_service.dart';
+import '../models/scan_result.dart';
 import 'imap_setup_screen.dart';
 import 'email_detail_screen.dart';
 
@@ -15,7 +17,9 @@ class EmailListScreen extends StatefulWidget {
 class _EmailListScreenState extends State<EmailListScreen> {
   final GmailService _gmailService = GmailService();
   final AuthService _authService = AuthService();
+  final ScanHistoryService _scanHistoryService = ScanHistoryService();
   List<EmailMessage> _emails = [];
+  Map<String, ScanResult> _scanResults = {}; // Map emailId -> ScanResult
   bool _isLoading = false;
   String? _errorMessage;
   String? _loginMethod;
@@ -49,9 +53,17 @@ class _EmailListScreenState extends State<EmailListScreen> {
 
       final emails = await _gmailService.fetchEmails(maxResults: 20);
       
+      // Load scan history to show colors
+      final scanHistory = await _scanHistoryService.getScanHistory();
+      final scanMap = <String, ScanResult>{};
+      for (var scan in scanHistory) {
+        scanMap[scan.emailId] = scan;
+      }
+      
       if (mounted) {
         setState(() {
           _emails = emails;
+          _scanResults = scanMap;
           _isLoading = false;
         });
       }
@@ -316,14 +328,41 @@ class _EmailListScreenState extends State<EmailListScreen> {
   }
 
   Widget _buildEmailItem(EmailMessage email) {
+    // Kiểm tra email đã được scan chưa
+    final scanResult = _scanResults[email.id];
+    
+    // Xác định màu sắc dựa trên kết quả scan
+    Color? borderColor;
+    Color? bgColor;
+    IconData? statusIcon;
+    
+    if (scanResult != null) {
+      if (scanResult.isPhishing) {
+        borderColor = const Color(0xFFEA4335); // Đỏ
+        bgColor = const Color(0xFFFEF3F2);
+        statusIcon = Icons.dangerous;
+      } else if (scanResult.isSuspicious) {
+        borderColor = const Color(0xFFFBBC04); // Vàng
+        bgColor = const Color(0xFFFFFAE6);
+        statusIcon = Icons.warning_amber;
+      } else if (scanResult.isSafe) {
+        borderColor = const Color(0xFF34A853); // Xanh
+        bgColor = const Color(0xFFE8F5E9);
+        statusIcon = Icons.check_circle;
+      }
+    }
+    
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: bgColor ?? Colors.white,
         borderRadius: BorderRadius.circular(12),
+        border: borderColor != null 
+            ? Border.all(color: borderColor, width: 2)
+            : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: (borderColor ?? Colors.black).withOpacity(0.08),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -331,15 +370,36 @@ class _EmailListScreenState extends State<EmailListScreen> {
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xFFE8F0FE),
-          child: Text(
-            email.from.isNotEmpty ? email.from[0].toUpperCase() : '?',
-            style: const TextStyle(
-              color: Color(0xFF4285F4),
-              fontWeight: FontWeight.bold,
+        leading: Stack(
+          children: [
+            CircleAvatar(
+              backgroundColor: borderColor?.withOpacity(0.15) ?? const Color(0xFFE8F0FE),
+              child: Text(
+                email.from.isNotEmpty ? email.from[0].toUpperCase() : '?',
+                style: TextStyle(
+                  color: borderColor ?? const Color(0xFF4285F4),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-          ),
+            if (statusIcon != null)
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    statusIcon,
+                    size: 14,
+                    color: borderColor,
+                  ),
+                ),
+              ),
+          ],
         ),
       title: Text(
         email.subject,
