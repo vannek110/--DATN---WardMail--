@@ -3,6 +3,7 @@ import '../models/email_message.dart';
 import '../services/gmail_service.dart';
 import '../services/auth_service.dart';
 import 'imap_setup_screen.dart';
+import 'email_detail_screen.dart';
 
 class EmailListScreen extends StatefulWidget {
   const EmailListScreen({super.key});
@@ -394,11 +395,10 @@ class _EmailListScreenState extends State<EmailListScreen> {
         ],
       ),
         onTap: () {
-          // TODO: Navigate to email detail screen for phishing analysis
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Chức năng phân tích phishing sẽ được thêm sau'),
-              backgroundColor: Color(0xFF4285F4),
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => EmailDetailScreen(email: email),
             ),
           );
         },

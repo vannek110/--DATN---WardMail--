@@ -4,6 +4,8 @@ import '../services/biometric_service.dart';
 import '../services/notification_service.dart';
 import 'email_list_screen.dart';
 import 'notification_screen.dart';
+import 'statistics_screen.dart';
+import 'reports_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -432,14 +434,26 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () => Navigator.pop(context),
                   ),
                   ListTile(
-                    leading: const Icon(Icons.history, color: Colors.grey),
-                    title: const Text('Lịch sử kiểm tra'),
-                    onTap: () {},
+                    leading: const Icon(Icons.bar_chart, color: Color(0xFF34A853)),
+                    title: const Text('Thống kê'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const StatisticsScreen()),
+                      );
+                    },
                   ),
                   ListTile(
-                    leading: const Icon(Icons.warning_outlined, color: Colors.grey),
-                    title: const Text('Email nguy hiểm'),
-                    onTap: () {},
+                    leading: const Icon(Icons.description_outlined, color: Color(0xFFFBBC04)),
+                    title: const Text('Báo cáo chi tiết'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ReportsScreen()),
+                      );
+                    },
                   ),
                   const Divider(),
                   Padding(

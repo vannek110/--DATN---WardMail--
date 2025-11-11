@@ -1,0 +1,562 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../models/email_message.dart';
+import '../models/scan_result.dart';
+import '../services/email_analysis_service.dart';
+import '../services/scan_history_service.dart';
+import '../services/notification_service.dart';
+
+class EmailDetailScreen extends StatefulWidget {
+  final EmailMessage email;
+
+  const EmailDetailScreen({super.key, required this.email});
+
+  @override
+  State<EmailDetailScreen> createState() => _EmailDetailScreenState();
+}
+
+class _EmailDetailScreenState extends State<EmailDetailScreen> {
+  final EmailAnalysisService _analysisService = EmailAnalysisService();
+  final ScanHistoryService _scanHistoryService = ScanHistoryService();
+  final NotificationService _notificationService = NotificationService();
+  
+  ScanResult? _scanResult;
+  bool _isAnalyzing = false;
+  bool _hasAnalyzed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPreviousAnalysis();
+  }
+
+  Future<void> _checkPreviousAnalysis() async {
+    final history = await _scanHistoryService.getScanHistory();
+    final previousScan = history.where((s) => s.emailId == widget.email.id).firstOrNull;
+    
+    if (previousScan != null) {
+      setState(() {
+        _scanResult = previousScan;
+        _hasAnalyzed = true;
+      });
+    }
+  }
+
+  Future<void> _analyzeEmail() async {
+    setState(() => _isAnalyzing = true);
+
+    try {
+      final result = await _analysisService.analyzeEmail(widget.email);
+      
+      await _scanHistoryService.saveScanResult(result);
+      
+      if (result.isPhishing) {
+        await _notificationService.showNotification(
+          title: '🚨 Phát hiện email phishing!',
+          body: 'Email từ ${widget.email.from} có dấu hiệu lừa đảo',
+          type: 'phishing',
+        );
+      } else if (result.isSuspicious) {
+        await _notificationService.showNotification(
+          title: '⚠️ Email nghi ngờ',
+          body: 'Email từ ${widget.email.from} cần xem xét kỹ hơn',
+          type: 'security',
+        );
+      } else {
+        await _notificationService.showNotification(
+          title: '✅ Email an toàn',
+          body: 'Email từ ${widget.email.from} đã được kiểm tra và an toàn',
+          type: 'safe',
+        );
+      }
+
+      setState(() {
+        _scanResult = result;
+        _hasAnalyzed = true;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Phân tích hoàn tất!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi phân tích: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isAnalyzing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        title: const Text(
+          'Chi tiết Email',
+          style: TextStyle(
+            color: Color(0xFF202124),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Color(0xFF5F6368)),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            if (_scanResult != null) _buildAnalysisResult(),
+            _buildEmailContent(),
+            const SizedBox(height: 80),
+          ],
+        ),
+      ),
+      floatingActionButton: _hasAnalyzed && _scanResult != null
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _isAnalyzing ? null : _analyzeEmail,
+              backgroundColor: const Color(0xFF4285F4),
+              icon: _isAnalyzing
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.security, color: Colors.white),
+              label: Text(
+                _isAnalyzing ? 'Đang phân tích...' : 'Phân tích Email',
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildAnalysisResult() {
+    if (_scanResult == null) return const SizedBox.shrink();
+
+    Color statusColor;
+    String statusText;
+    IconData statusIcon;
+    String statusDescription;
+
+    if (_scanResult!.isPhishing) {
+      statusColor = const Color(0xFFEA4335);
+      statusText = 'NGUY HIỂM';
+      statusIcon = Icons.dangerous;
+      statusDescription = 'Email này có dấu hiệu lừa đảo. Không nên mở link hoặc tải file đính kèm.';
+    } else if (_scanResult!.isSuspicious) {
+      statusColor = const Color(0xFFFBBC04);
+      statusText = 'NGHI NGỜ';
+      statusIcon = Icons.warning_amber;
+      statusDescription = 'Email này có một số dấu hiệu đáng ngờ. Hãy cẩn thận khi tương tác.';
+    } else {
+      statusColor = const Color(0xFF34A853);
+      statusText = 'AN TOÀN';
+      statusIcon = Icons.check_circle;
+      statusDescription = 'Email này đã được kiểm tra và có vẻ an toàn.';
+    }
+
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: statusColor, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: statusColor.withOpacity(0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(statusIcon, color: statusColor, size: 32),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      statusText,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: statusColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Độ tin cậy: ${(_scanResult!.confidenceScore * 100).toInt()}%',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              statusDescription,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[800],
+                height: 1.5,
+              ),
+            ),
+          ),
+          if (_scanResult!.detectedThreats.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            const Text(
+              'Mối đe dọa phát hiện:',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _scanResult!.detectedThreats.map((threat) => 
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.red[200]!),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.bug_report, size: 14, color: Colors.red[700]),
+                      const SizedBox(width: 4),
+                      Text(
+                        threat,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.red[900],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ).toList(),
+            ),
+          ],
+          // Hiển thị kết quả Gemini AI nếu có
+          if (_scanResult!.analysisDetails['usedGeminiAI'] == true) ...[
+            const SizedBox(height: 16),
+            _buildGeminiResults(),
+          ],
+          const SizedBox(height: 12),
+          Text(
+            'Phân tích lúc: ${DateFormat('dd/MM/yyyy HH:mm').format(_scanResult!.scanDate)}',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmailContent() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Thông tin Email',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const Divider(height: 24),
+          _buildInfoRow('Từ:', widget.email.from),
+          const SizedBox(height: 12),
+          _buildInfoRow('Tiêu đề:', widget.email.subject),
+          const SizedBox(height: 12),
+          _buildInfoRow(
+            'Ngày:',
+            DateFormat('dd/MM/yyyy HH:mm').format(widget.email.date),
+          ),
+          const Divider(height: 24),
+          const Text(
+            'Nội dung:',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF5F6368),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: Text(
+              widget.email.body ?? widget.email.snippet,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[800],
+                height: 1.6,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 80,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[600],
+            ),
+          ),
+        ),
+        Expanded(
+          child: SelectableText(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF202124),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGeminiResults() {
+    final geminiData = _scanResult!.analysisDetails['gemini'] as Map<String, dynamic>?;
+    if (geminiData == null) return const SizedBox.shrink();
+
+    final reasons = geminiData['reasons'] as List<dynamic>? ?? [];
+    final recommendations = geminiData['recommendations'] as List<dynamic>? ?? [];
+    final detailedAnalysis = geminiData['detailedAnalysis'] as Map<String, dynamic>? ?? {};
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.purple[50]!, Colors.blue[50]!],
+            ),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.purple[200]!),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.auto_awesome, color: Colors.purple[700], size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Phân tích bởi Gemini AI',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.purple[700],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${geminiData['riskScore']?.toInt() ?? 0}/100',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        if (reasons.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          const Text(
+            'Lý do đánh giá:',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 6),
+          ...reasons.map((reason) => Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 6, right: 8),
+                  width: 5,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.purple[700],
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    reason.toString(),
+                    style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                  ),
+                ),
+              ],
+            ),
+          )),
+        ],
+
+        if (recommendations.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          const Text(
+            'Khuyến nghị:',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 6),
+          ...recommendations.map((rec) => Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.tips_and_updates, size: 16, color: Colors.blue[700]),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    rec.toString(),
+                    style: TextStyle(fontSize: 12, color: Colors.blue[900]),
+                  ),
+                ),
+              ],
+            ),
+          )),
+        ],
+
+        if (detailedAnalysis.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: const Text(
+              'Phân tích chi tiết',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            children: [
+              ...detailedAnalysis.entries.map((entry) => 
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 100,
+                        child: Text(
+                          '${entry.key}:',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          entry.value.toString(),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
