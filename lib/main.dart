@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'services/notification_service.dart';
+import 'services/background_email_service.dart';
+import 'services/auto_start_service.dart';
 import 'screens/auth_wrapper.dart';
 import 'screens/google_login_screen.dart';
 import 'screens/home_screen.dart';
@@ -9,10 +11,28 @@ import 'screens/email_login_screen.dart';
 import 'screens/email_verification_screen.dart';
 import 'screens/biometric_lock_screen.dart';
 
+// GlobalKey để navigate từ notification
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
   await Firebase.initializeApp();
+  
+  // Initialize notification service
   await NotificationService().initialize();
+  
+  // Set navigator key cho notification service
+  NotificationService.setNavigatorKey(navigatorKey);
+  
+  // Initialize background email service (WorkManager)
+  await BackgroundEmailService.initialize();
+  
+  // ✅ TỰ ĐỘNG CHECK VÀ RESTART BACKGROUND SERVICE NẾU CẦN
+  // Sẽ tự động chạy ngay cả sau khi reboot device
+  await AutoStartService.checkAndRestart();
+  
   runApp(const MyApp());
 }
 
@@ -22,6 +42,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey, // ✅ Set navigator key
       title: 'Phát hiện Phishing',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(

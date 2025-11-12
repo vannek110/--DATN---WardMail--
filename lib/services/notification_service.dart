@@ -1,8 +1,12 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/notification_model.dart';
+import '../models/email_message.dart';
+import '../screens/email_detail_screen.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -12,9 +16,18 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   static const String _notificationsKey = 'notifications';
   List<NotificationModel> _notifications = [];
+  
+  // GlobalKey để navigate từ notification
+  static GlobalKey<NavigatorState>? _navigatorKey;
+
+  /// Set navigator key để có thể navigate từ notification
+  static void setNavigatorKey(GlobalKey<NavigatorState> key) {
+    _navigatorKey = key;
+  }
 
   Future<void> initialize() async {
     await _initializeLocalNotifications();
@@ -97,16 +110,88 @@ class NotificationService {
       android: androidDetails,
     );
 
+    // Encode notification data as payload
+    final payload = notification.data != null 
+        ? jsonEncode(notification.data)
+        : null;
+
     await _localNotifications.show(
       notification.id.hashCode,
       notification.title,
       notification.body,
       details,
+      payload: payload,
     );
   }
 
-  void _onNotificationTapped(NotificationResponse response) {
-    print('Notification tapped: ${response.payload}');
+  void _onNotificationTapped(NotificationResponse response) async {
+    print('=== NOTIFICATION TAPPED ===');
+    print('Payload: ${response.payload}');
+    
+    try {
+      if (response.payload != null) {
+        final data = jsonDecode(response.payload!);
+        final action = data['action'];
+        
+        if (action == 'open_email_detail') {
+          await _navigateToEmailDetail(data);
+        }
+      }
+    } catch (e) {
+      print('Error handling notification tap: $e');
+    }
+  }
+
+  /// Navigate đến email detail screen khi tap notification
+  Future<void> _navigateToEmailDetail(Map<String, dynamic> data) async {
+    try {
+      final emailId = data['email_id'];
+      if (emailId == null) {
+        print('No email_id in notification data');
+        return;
+      }
+
+      // Load email từ cache
+      final emailCacheJson = await _storage.read(key: 'email_cache_$emailId');
+      
+      EmailMessage? email;
+      if (emailCacheJson != null) {
+        final emailData = jsonDecode(emailCacheJson);
+        email = EmailMessage(
+          id: emailData['id'],
+          from: emailData['from'],
+          subject: emailData['subject'],
+          snippet: emailData['snippet'],
+          body: emailData['body'],
+          date: DateTime.parse(emailData['date']),
+        );
+      } else {
+        // Fallback: tạo email từ notification data
+        email = EmailMessage(
+          id: emailId,
+          from: data['from'] ?? 'Unknown',
+          subject: data['subject'] ?? 'No subject',
+          snippet: data['snippet'] ?? '',
+          body: data['body'] ?? '',
+          date: DateTime.parse(data['date'] ?? DateTime.now().toIso8601String()),
+        );
+      }
+
+      // Navigate đến EmailDetailScreen
+      if (_navigatorKey?.currentContext != null) {
+        await Navigator.push(
+          _navigatorKey!.currentContext!,
+          MaterialPageRoute(
+            builder: (context) => EmailDetailScreen(email: email!),
+          ),
+        );
+        print('✅ Navigated to email detail: $emailId');
+      } else {
+        print('⚠️ Navigator context is null');
+      }
+    } catch (e) {
+      print('Error navigating to email detail: $e');
+    }
   }
 
   Future<void> _loadNotifications() async {

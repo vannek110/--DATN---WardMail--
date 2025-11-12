@@ -63,7 +63,7 @@ class EmailAnalysisService {
       threats.addAll(geminiResult.phishingIndicators);
       
     } catch (e, stackTrace) {
-      // Nếu Gemini lỗi, trả về kết quả unknown
+      // Nếu Gemini lỗi, trả về kết quả unknown với thông tin chi tiết
       print('========================================');
       print('GEMINI ANALYSIS FAILED');
       print('Error: $e');
@@ -72,7 +72,18 @@ class EmailAnalysisService {
       
       riskScore = 0.5;
       result = 'unknown';
-      threats.add('Không thể phân tích với AI. Vui lòng kiểm tra thủ công.');
+      
+      // Thêm error message chi tiết để debug
+      String errorMessage = 'Lỗi phân tích AI';
+      if (e.toString().contains('API')) {
+        errorMessage = 'Lỗi API Gemini - kiểm tra API key';
+      } else if (e.toString().contains('JSON') || e.toString().contains('Format')) {
+        errorMessage = 'Lỗi định dạng JSON từ AI';
+      } else if (e.toString().contains('network') || e.toString().contains('connect')) {
+        errorMessage = 'Lỗi kết nối mạng';
+      }
+      
+      threats.add('$errorMessage: ${e.toString().substring(0, e.toString().length > 100 ? 100 : e.toString().length)}');
     }
 
     // Đảm bảo riskScore trong khoảng 0-1

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/biometric_service.dart';
 import '../services/notification_service.dart';
+import '../services/email_monitor_service.dart';
+import '../services/background_email_service.dart';
+import '../services/quick_email_checker.dart';
 import 'email_list_screen.dart';
 import 'notification_screen.dart';
 import 'statistics_screen.dart';
@@ -18,20 +21,163 @@ class _HomeScreenState extends State<HomeScreen> {
   final AuthService _authService = AuthService();
   final BiometricService _biometricService = BiometricService();
   final NotificationService _notificationService = NotificationService();
+  final EmailMonitorService _emailMonitorService = EmailMonitorService();
+  final QuickEmailChecker _quickChecker = QuickEmailChecker();
   Map<String, dynamic>? _userData;
   bool _isLoading = true;
   bool _biometricAvailable = false;
   bool _biometricEnabled = false;
   int _unreadNotificationCount = 0;
+  bool _isChecking = false; // Track checking state
+  bool _isDisposed = false; // ✅ Track dispose state
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
     _loadNotificationCount();
+    _startEmailMonitoring();
+    
+    // ✅ CHECK 1 LẦN KHI MỞ APP (sau 5 giây)
+    // Đây là lần check duy nhất khi app mở
+    // Sau đó chỉ có background monitoring (30 phút) hoặc manual check
+    Future.delayed(const Duration(seconds: 5), () {
+      // ✅ Double check: mounted và not disposed
+      if (mounted && !_isDisposed) {
+        print('🔄 Checking emails once on app open...');
+        _checkEmailsNow();
+      } else {
+        print('⚠️ HomeScreen disposed before check');
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    print('🔴 HomeScreen disposing...');
+    _isDisposed = true; // ✅ Mark as disposed
+    
+    // ✅ Stop foreground monitoring khi thoát
+    _emailMonitorService.stopMonitoring();
+    
+    super.dispose();
+    print('🔴 HomeScreen disposed');
+  }
+
+  /// Bật monitoring email mới - NHANH & NGẦM (1 phút + 15 phút)
+  Future<void> _startEmailMonitoring() async {
+    print('==========================================');
+    print('🚀 STARTING EMAIL MONITORING');
+    print('==========================================');
+    
+    try {
+      // ✅ Foreground: Check mỗi 1 PHÚT
+      // → Notification NHANH
+      // → Phân tích ngầm (không hiện UI)
+      
+      print('📱 Starting foreground monitoring (1 min interval)...');
+      await _emailMonitorService.startMonitoring();
+      print('✅ Foreground: Check mỗi 1 PHÚT (notification nhanh)');
+      
+      // Background monitoring - check mỗi 15 PHÚT
+      print('🌙 Registering background monitoring...');
+      await BackgroundEmailService.registerPeriodicTask();
+      print('✅ Background: Check mỗi 15 PHÚT (khi app đóng)');
+      
+      print('==========================================');
+      print('🎉 MONITORING STARTED');
+      print('📌 Notification: NHANH | Phân tích: NGẦM');
+      print('==========================================');
+      
+    } catch (e) {
+      print('==========================================');
+      print('❌ FAILED TO START MONITORING');
+      print('Error: $e');
+      print('Stack trace:');
+      print(StackTrace.current);
+      print('==========================================');
+      
+      // Chỉ thông báo khi có lỗi
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('⚠️ Lỗi khởi động monitoring: $e'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  /// Check emails ngay lập tức với AI analysis
+  Future<void> _checkEmailsNow() async {
+    // ✅ Safety check trước khi bắt đầu
+    if (!mounted || _isDisposed) {
+      print('⚠️ HomeScreen not mounted, skipping check');
+      return;
+    }
+    
+    if (_isChecking) {
+      if (mounted && !_isDisposed) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⏳ Đang check email, vui lòng đợi...'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
+
+    // ✅ Safe setState
+    if (mounted && !_isDisposed) {
+      setState(() => _isChecking = true);
+    }
+
+    // ❌ KHÔNG HIỆN SNACKBAR - phân tích ngầm
+    // User sẽ nhận notification trực tiếp
+
+    try {
+      print('=== CHECKING EMAILS NOW ===');
+      final newEmailCount = await _quickChecker.checkAndAnalyzeNow();
+      print('Found $newEmailCount new emails');
+      
+      // ✅ Check again after async operation
+      if (mounted && !_isDisposed) {
+        if (newEmailCount > 0) {
+          // ✅ Chỉ reload notification count, KHÔNG hiện SnackBar
+          _loadNotificationCount();
+          print('✅ $newEmailCount email mới - notification đã gửi');
+        } else {
+          print('✓ Không có email mới');
+        }
+      }
+    } catch (e, stackTrace) {
+      print('❌ Error checking emails: $e');
+      print('Stack trace: $stackTrace');
+      
+      if (mounted && !_isDisposed) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Lỗi: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      // ✅ Safe setState in finally
+      if (mounted && !_isDisposed) {
+        setState(() => _isChecking = false);
+      }
+    }
   }
 
   void _loadNotificationCount() {
+    if (!mounted || _isDisposed) return; // ✅ Safety check
+    
     setState(() {
       _unreadNotificationCount = _notificationService.getUnreadCount();
     });
@@ -42,7 +188,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final biometricAvailable = await _biometricService.isBiometricAvailable();
     final biometricEnabled = await _biometricService.isBiometricEnabled();
     
-    if (mounted) {
+    // ✅ Safety check: mounted và not disposed
+    if (mounted && !_isDisposed) {
       setState(() {
         _userData = data;
         _biometricAvailable = biometricAvailable;
@@ -56,7 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (value) {
       final result = await _biometricService.authenticate();
       if (!result.success) {
-        if (mounted) {
+        if (mounted && !_isDisposed) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(result.errorMessage ?? 'Xác thực thất bại'),
@@ -71,7 +218,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     await _biometricService.setBiometricEnabled(value);
     
-    if (mounted) {
+    // ✅ Safety check
+    if (mounted && !_isDisposed) {
       setState(() {
         _biometricEnabled = value;
       });
@@ -232,6 +380,68 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 16),
             ],
+            // Check Email Ngay button - WITH AI ANALYSIS
+            ListTile(
+              leading: Icon(
+                Icons.refresh,
+                color: Colors.green[700],
+              ),
+              title: const Text(
+                'Check Email Ngay',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                'Tìm email mới và phân tích bằng AI',
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              ),
+              onTap: () async {
+                Navigator.pop(context);
+                await _checkEmailsNow();
+              },
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.green[100]!),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Test notification button
+            ListTile(
+              leading: Icon(
+                Icons.notifications_active,
+                color: Colors.blue[700],
+              ),
+              title: const Text(
+                'Test thông báo',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                'Gửi thông báo thử nghiệm',
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              ),
+              onTap: () async {
+                Navigator.pop(context);
+                await _emailMonitorService.testNotification();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Đã gửi thông báo test!'),
+                      backgroundColor: Colors.green,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.blue[100]!),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Logout button
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
               title: const Text(

@@ -1,0 +1,256 @@
+import 'dart:async';
+import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'gmail_service.dart';
+import 'notification_service.dart';
+import 'email_analysis_service.dart';
+import 'scan_history_service.dart';
+import '../models/email_message.dart';
+
+/// Service theo dõi email mới và hiển thị thông báo
+class EmailMonitorService {
+  static final EmailMonitorService _instance = EmailMonitorService._internal();
+  factory EmailMonitorService() => _instance;
+  EmailMonitorService._internal();
+
+  final GmailService _gmailService = GmailService();
+  final NotificationService _notificationService = NotificationService();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+
+  Timer? _monitorTimer;
+  List<String> _previousEmailIds = [];
+  bool _isMonitoring = false;
+  
+  static const String _lastCheckKey = 'email_monitor_last_check';
+  static const String _emailIdsKey = 'email_monitor_ids';
+  static const int _checkIntervalSeconds = 30; // ✅ Check mỗi 1 PHÚT (nhanh và hợp lý)
+
+  /// Bắt đầu theo dõi email mới
+  Future<void> startMonitoring() async {
+    if (_isMonitoring) {
+      print('Email monitor is already running');
+      return;
+    }
+
+    print('=== STARTING EMAIL MONITOR ===');
+    _isMonitoring = true;
+
+    // Load danh sách email cũ
+    await _loadPreviousEmailIds();
+
+    // Check ngay lần đầu
+    await _checkForNewEmails();
+
+    // Setup timer để check định kỳ
+    _monitorTimer = Timer.periodic(
+      Duration(seconds: _checkIntervalSeconds),
+      (timer) => _checkForNewEmails(),
+    );
+
+    print('Email monitor started - checking every ${_checkIntervalSeconds ~/ 60} minutes');
+  }
+
+  /// Dừng theo dõi email
+  void stopMonitoring() {
+    if (_monitorTimer != null) {
+      _monitorTimer!.cancel();
+      _monitorTimer = null;
+      _isMonitoring = false;
+      print('Email monitor stopped');
+    }
+  }
+
+  /// Check email mới
+  Future<void> _checkForNewEmails() async {
+    try {
+      print('Checking for new emails...');
+      
+      // Fetch emails mới nhất (chỉ lấy 20 email để tối ưu)
+      final emails = await _gmailService.fetchEmails(maxResults: 20);
+      
+      if (emails.isEmpty) {
+        print('No emails found');
+        return;
+      }
+
+      // Lọc ra emails mới (chưa có trong danh sách cũ)
+      final newEmails = emails
+          .where((email) => !_previousEmailIds.contains(email.id))
+          .toList();
+
+      if (newEmails.isNotEmpty) {
+        print('Found ${newEmails.length} new email(s)!');
+        
+        for (var email in newEmails) {
+          await _showNewEmailNotification(email);
+        }
+
+        // Cập nhật danh sách email ids
+        _previousEmailIds = emails.map((e) => e.id).toList();
+        await _savePreviousEmailIds();
+      } else {
+        print('No new emails');
+      }
+
+      // Lưu thời gian check cuối
+      await _storage.write(
+        key: _lastCheckKey,
+        value: DateTime.now().toIso8601String(),
+      );
+    } catch (e) {
+      print('Error checking for new emails: $e');
+      // Không throw error để timer tiếp tục chạy
+    }
+  }
+
+  /// Hiển thị thông báo NHANH cho email mới + phân tích NGẦM
+  /// Gửi notification NGAY, phân tích sau (không blocking)
+  Future<void> _showNewEmailNotification(EmailMessage email) async {
+    final title = '📧 Email mới từ ${_extractSenderName(email.from)}';
+    final body = email.subject.isNotEmpty 
+        ? email.subject 
+        : 'Không có tiêu đề';
+
+    // ✅ GỬI NOTIFICATION NGAY (không đợi phân tích)
+    await _notificationService.showNotification(
+      title: title,
+      body: body,
+      type: 'new_email',
+      data: {
+        'email_id': email.id,
+        'from': email.from,
+        'subject': email.subject,
+        'snippet': email.snippet,
+        'body': email.body ?? email.snippet,
+        'date': email.date.toIso8601String(),
+        'action': 'open_email_detail',
+      },
+    );
+
+    print('✅ Notification sent INSTANTLY for: ${email.subject}');
+
+    // ✅ PHÂN TÍCH NGẦM (async, không blocking, không hiện UI)
+    _analyzeEmailSilently(email);
+  }
+
+  /// Phân tích email NGẦM (không blocking, không hiện gì trên UI)
+  Future<void> _analyzeEmailSilently(EmailMessage email) async {
+    try {
+      print('🔍 Silent analysis started for: ${email.subject}');
+      
+      final analysisService = EmailAnalysisService();
+      final scanHistoryService = ScanHistoryService();
+      final storage = const FlutterSecureStorage();
+      
+      // Phân tích AI (chạy ngầm)
+      final result = await analysisService.analyzeEmail(email);
+      
+      // Lưu kết quả vào database
+      await scanHistoryService.saveScanResult(result);
+      print('✅ Analysis saved silently: ${result.result}');
+      
+      // Lưu email cache
+      final emailJson = jsonEncode({
+        'id': email.id,
+        'from': email.from,
+        'subject': email.subject,
+        'snippet': email.snippet,
+        'body': email.body ?? email.snippet,
+        'date': email.date.toIso8601String(),
+      });
+      await storage.write(key: 'email_cache_${email.id}', value: emailJson);
+      
+      // KHÔNG UPDATE NOTIFICATION - user đã thấy rồi
+      // Kết quả sẽ hiện khi user tap vào notification
+      
+    } catch (e) {
+      print('⚠️ Silent analysis failed (not critical): $e');
+      // Không hiển thị lỗi cho user, chỉ log
+    }
+  }
+
+  /// Trích xuất tên người gửi từ email address
+  String _extractSenderName(String from) {
+    // Format: "John Doe <john@example.com>" or "john@example.com"
+    final nameMatch = RegExp(r'^"?([^"<]+)"?\s*<').firstMatch(from);
+    if (nameMatch != null) {
+      return nameMatch.group(1)?.trim() ?? from;
+    }
+    
+    // Nếu chỉ có email, lấy phần trước @
+    final emailMatch = RegExp(r'^([^@<\s]+)').firstMatch(from);
+    return emailMatch?.group(1) ?? from;
+  }
+
+  /// Load danh sách email IDs đã check trước đó
+  Future<void> _loadPreviousEmailIds() async {
+    try {
+      final idsJson = await _storage.read(key: _emailIdsKey);
+      if (idsJson != null && idsJson.isNotEmpty) {
+        _previousEmailIds = idsJson.split(',');
+        print('Loaded ${_previousEmailIds.length} previous email IDs');
+      } else {
+        // Lần đầu tiên chạy, fetch emails hiện tại để làm baseline
+        final emails = await _gmailService.fetchEmails(maxResults: 10);
+        _previousEmailIds = emails.map((e) => e.id).toList();
+        await _savePreviousEmailIds();
+        print('Initialized with ${_previousEmailIds.length} current emails');
+      }
+    } catch (e) {
+      print('Error loading previous email IDs: $e');
+      _previousEmailIds = [];
+    }
+  }
+
+  /// Lưu danh sách email IDs
+  Future<void> _savePreviousEmailIds() async {
+    try {
+      final idsJson = _previousEmailIds.join(',');
+      await _storage.write(key: _emailIdsKey, value: idsJson);
+    } catch (e) {
+      print('Error saving email IDs: $e');
+    }
+  }
+
+  /// Lấy thời gian check cuối cùng
+  Future<DateTime?> getLastCheckTime() async {
+    try {
+      final timeStr = await _storage.read(key: _lastCheckKey);
+      if (timeStr != null) {
+        return DateTime.parse(timeStr);
+      }
+    } catch (e) {
+      print('Error getting last check time: $e');
+    }
+    return null;
+  }
+
+  /// Reset monitor (xóa dữ liệu cũ)
+  Future<void> reset() async {
+    stopMonitoring();
+    _previousEmailIds = [];
+    await _storage.delete(key: _emailIdsKey);
+    await _storage.delete(key: _lastCheckKey);
+    print('Email monitor reset');
+  }
+
+  /// Check xem có đang monitoring không
+  bool get isMonitoring => _isMonitoring;
+
+  /// Test notification (để test UI)
+  Future<void> testNotification() async {
+    await _notificationService.showNotification(
+      title: '📧 Email test',
+      body: 'Đây là thông báo test từ GuardMail',
+      type: 'test',
+      data: {'test': 'true'},
+    );
+  }
+
+  /// Check email ngay lập tức (không đợi timer)
+  /// Được gọi từ UI button
+  Future<void> checkNow() async {
+    print('=== MANUAL CHECK TRIGGERED ===');
+    await _checkForNewEmails();
+  }
+}
