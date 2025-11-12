@@ -318,14 +318,25 @@ CHỈ trả về JSON VALID, không thêm gì khác. Kiểm tra lại JSON trư�
       final riskScore = (json['risk_score'] ?? json['riskScore'] ?? 0).toDouble();
       final riskLevel = json['risk_level'] ?? json['classification'] ?? 'unknown';
       
-      // Convert risk_level to classification
+      // ✅ FIX: Dùng risk_score làm tiêu chí CHÍNH để phân loại
+      // Không tin vào risk_level vì Gemini có thể trả về không nhất quán
       String classification = 'unknown';
-      if (riskLevel == 'Low') {
-        classification = 'safe';
-      } else if (riskLevel == 'Medium') {
-        classification = 'suspicious';
-      } else if (riskLevel == 'High' || riskLevel == 'Critical') {
-        classification = 'phishing';
+      if (riskScore < 26) {
+        classification = 'safe';      // 0-25: An toàn
+      } else if (riskScore < 51) {
+        classification = 'suspicious'; // 26-50: Nghi ngờ
+      } else {
+        classification = 'phishing';   // 51-100: Nguy hiểm
+      }
+      
+      // Log để debug nếu có mâu thuẫn
+      final expectedRiskLevel = riskScore < 26 ? 'Low' : (riskScore < 51 ? 'Medium' : (riskScore < 76 ? 'High' : 'Critical'));
+      if (riskLevel != expectedRiskLevel) {
+        print('⚠️ WARNING: Mismatch detected!');
+        print('  - Gemini risk_level: $riskLevel');
+        print('  - Actual risk_score: $riskScore');
+        print('  - Expected risk_level: $expectedRiskLevel');
+        print('  - Using risk_score-based classification: $classification');
       }
 
       // Parse detailed_analysis
@@ -445,9 +456,11 @@ class GeminiAnalysisResult {
     required this.rawResponse,
   });
 
-  bool get isPhishing => classification == 'phishing' || riskScore >= 61;
-  bool get isSuspicious => classification == 'suspicious' || (riskScore >= 31 && riskScore < 61);
-  bool get isSafe => classification == 'safe' || riskScore < 31;
+  // ✅ FIX: Chỉ dựa vào classification, không override bằng riskScore
+  // Vì classification đã được tính từ riskScore ở bước parse
+  bool get isPhishing => classification == 'phishing';
+  bool get isSuspicious => classification == 'suspicious';
+  bool get isSafe => classification == 'safe';
 
   Map<String, dynamic> toJson() {
     return {

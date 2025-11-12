@@ -337,18 +337,27 @@ class _EmailListScreenState extends State<EmailListScreen> {
     IconData? statusIcon;
     
     if (scanResult != null) {
-      if (scanResult.isPhishing) {
-        borderColor = const Color(0xFFEA4335); // Đỏ
-        bgColor = const Color(0xFFFEF3F2);
-        statusIcon = Icons.dangerous;
-      } else if (scanResult.isSuspicious) {
-        borderColor = const Color(0xFFFBBC04); // Vàng
-        bgColor = const Color(0xFFFFFAE6);
-        statusIcon = Icons.warning_amber;
-      } else if (scanResult.isSafe) {
-        borderColor = const Color(0xFF34A853); // Xanh
+      // ✅ FIX: Tính toán lại màu dựa vào riskScore thay vì tin vào result string cũ
+      // Lấy riskScore từ analysisDetails (0-1 scale)
+      final riskScore = scanResult.analysisDetails['riskScore'] as double? ?? 0.5;
+      final riskScorePercent = riskScore * 100; // Convert sang 0-100
+      
+      // Phân loại lại theo logic mới: 0-25 = safe, 26-50 = suspicious, 51-100 = phishing
+      if (riskScorePercent < 26) {
+        // AN TOÀN - Xanh lá
+        borderColor = const Color(0xFF34A853);
         bgColor = const Color(0xFFE8F5E9);
         statusIcon = Icons.check_circle;
+      } else if (riskScorePercent < 51) {
+        // NGHI NGỜ - Vàng
+        borderColor = const Color(0xFFFBBC04);
+        bgColor = const Color(0xFFFFFAE6);
+        statusIcon = Icons.warning_amber;
+      } else {
+        // NGUY HIỂM - Đỏ
+        borderColor = const Color(0xFFEA4335);
+        bgColor = const Color(0xFFFEF3F2);
+        statusIcon = Icons.dangerous;
       }
     }
     
