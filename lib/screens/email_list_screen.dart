@@ -514,6 +514,7 @@ class _EmailListScreenState extends State<EmailListScreen> {
         ],
       ),
       trailing: Column(
+        mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -524,6 +525,24 @@ class _EmailListScreenState extends State<EmailListScreen> {
               color: Colors.grey[600],
             ),
           ),
+          if (scanResult != null && scanResult.result == 'unknown') ...[
+            const SizedBox(height: 4),
+            IconButton(
+              icon: const Icon(Icons.refresh, size: 18),
+              color: Colors.orange[700],
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              tooltip: 'Phân tích lại email',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EmailDetailScreen(email: email),
+                  ),
+                );
+              },
+            ),
+          ],
           if (!email.isRead) ...[
             const SizedBox(height: 4),
             Container(

@@ -157,7 +157,7 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF34A853).withOpacity(0.3),
+                          color: const Color(0xFF34A853).withValues(alpha: 0.3),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -329,13 +329,15 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
                   const SizedBox(height: 8),
                   Builder(
                     builder: (context) {
+                      // Chỉ hiển thị thanh độ mạnh khi người dùng đã nhập mật khẩu
+                      if (_passwordController.text.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+
                       Color color;
                       String label;
 
-                      if (_passwordStrength == 0) {
-                        color = Colors.grey;
-                        label = 'Nhập mật khẩu để kiểm tra độ mạnh';
-                      } else if (_passwordStrength < 0.4) {
+                      if (_passwordStrength < 0.4) {
                         color = Colors.red;
                         label = 'Mật khẩu yếu';
                       } else if (_passwordStrength < 0.8) {
@@ -429,7 +431,7 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF4285F4).withOpacity(0.3),
+                          color: const Color(0xFF4285F4).withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
