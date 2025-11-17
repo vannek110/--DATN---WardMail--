@@ -256,9 +256,10 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
 
-    if (confirmed == true && mounted) {
-      await _authService.signOut();
+    if (confirmed == true) {
+      if (!mounted) return;
       Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+      await _authService.signOut();
     }
   }
 

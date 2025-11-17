@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
+import '../services/recaptcha_service.dart';
 
 class EmailLoginScreen extends StatefulWidget {
   const EmailLoginScreen({super.key});
@@ -17,6 +18,7 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
   
   bool _isLoading = false;
   bool _obscurePassword = true;
+  String? _recaptchaToken;
   String? _errorMessage;
 
   @override
@@ -37,6 +39,18 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
     });
 
     try {
+      if (_recaptchaToken == null || _recaptchaToken!.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Không xác minh được reCAPTCHA, vui lòng thử lại'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
       final result = await _authService.signInWithEmail(
         email: _emailController.text.trim(),
         password: _passwordController.text,
@@ -303,6 +317,14 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
                         ),
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  RecaptchaWidget(
+                    onVerified: (token) {
+                      setState(() {
+                        _recaptchaToken = token;
+                      });
+                    },
                   ),
                   const SizedBox(height: 16),
                   Container(

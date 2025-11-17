@@ -32,7 +32,7 @@ void main() async {
   // ✅ TỰ ĐỘNG CHECK VÀ RESTART BACKGROUND SERVICE NẾU CẦN
   // Sẽ tự động chạy ngay cả sau khi reboot device
   await AutoStartService.checkAndRestart();
-  
+
   runApp(const MyApp());
 }
 

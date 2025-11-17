@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
+import '../services/recaptcha_service.dart';
 
 class EmailRegisterScreen extends StatefulWidget {
   const EmailRegisterScreen({super.key});
@@ -20,7 +21,9 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  String? _recaptchaToken;
   String? _errorMessage;
+  double _passwordStrength = 0;
 
   @override
   void dispose() {
@@ -29,6 +32,22 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  void _updatePasswordStrength(String value) {
+    if (value.isEmpty) {
+      _passwordStrength = 0;
+      return;
+    }
+
+    int strength = 0;
+    if (value.length >= 8) strength++;
+    if (RegExp(r'[A-Z]').hasMatch(value)) strength++;
+    if (RegExp(r'[a-z]').hasMatch(value)) strength++;
+    if (RegExp(r'[0-9]').hasMatch(value)) strength++;
+    if (RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(value)) strength++;
+
+    _passwordStrength = (strength / 5).clamp(0, 1).toDouble();
   }
 
   Future<void> _handleRegister() async {
@@ -42,6 +61,18 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
     });
 
     try {
+      if (_recaptchaToken == null || _recaptchaToken!.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Không xác minh được reCAPTCHA, vui lòng thử lại'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
       final result = await _authService.signUpWithEmail(
         email: _emailController.text.trim(),
         password: _passwordController.text,
@@ -272,14 +303,68 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
                         borderSide: const BorderSide(color: Color(0xFF4285F4), width: 2),
                       ),
                     ),
+                    onChanged: (value) {
+                      setState(() {
+                        _updatePasswordStrength(value);
+                      });
+                    },
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Vui lòng nhập mật khẩu';
                       }
-                      if (value.length < 6) {
-                        return 'Mật khẩu phải có ít nhất 6 ký tự';
+                      if (value.length < 8) {
+                        return 'Mật khẩu phải có ít nhất 8 ký tự';
+                      }
+                      final hasUpper = RegExp(r'[A-Z]').hasMatch(value);
+                      final hasLower = RegExp(r'[a-z]').hasMatch(value);
+                      final hasDigit = RegExp(r'[0-9]').hasMatch(value);
+                      final hasSpecial = RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(value);
+
+                      if (!hasUpper || !hasLower || !hasDigit || !hasSpecial) {
+                        return 'Mật khẩu phải có chữ hoa, chữ thường, số và ký tự đặc biệt';
                       }
                       return null;
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  Builder(
+                    builder: (context) {
+                      Color color;
+                      String label;
+
+                      if (_passwordStrength == 0) {
+                        color = Colors.grey;
+                        label = 'Nhập mật khẩu để kiểm tra độ mạnh';
+                      } else if (_passwordStrength < 0.4) {
+                        color = Colors.red;
+                        label = 'Mật khẩu yếu';
+                      } else if (_passwordStrength < 0.8) {
+                        color = Colors.orange;
+                        label = 'Mật khẩu trung bình';
+                      } else {
+                        color = Colors.green;
+                        label = 'Mật khẩu mạnh';
+                      }
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: _passwordStrength == 0 ? 0.05 : _passwordStrength,
+                              minHeight: 6,
+                              backgroundColor: Colors.grey[300],
+                              valueColor: AlwaysStoppedAnimation<Color>(color),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            label,
+                            style: TextStyle(fontSize: 12, color: color),
+                          ),
+                        ],
+                      );
                     },
                   ),
                   const SizedBox(height: 16),
@@ -323,6 +408,15 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
                         return 'Mật khẩu không khớp';
                       }
                       return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
+                  RecaptchaWidget(
+                    onVerified: (token) {
+                      setState(() {
+                        _recaptchaToken = token;
+                      });
                     },
                   ),
                   const SizedBox(height: 24),

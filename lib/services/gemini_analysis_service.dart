@@ -9,7 +9,6 @@ class GeminiAnalysisService {
   // Danh sách models để fallback nếu model chính lỗi
   static const List<String> _availableModels = [
     'gemini-2.5-flash',      // Model mới nhất, nhanh nhất (stable 2025)
-    'gemini-2.5-pro',        // Model mạnh hơn nhưng chậm hơn
     'gemini-2.0-flash-001',  // Model fallback cũ hơn
     'gemini-1.5-flash',      // Model cũ nhất
   ];
