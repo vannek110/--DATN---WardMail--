@@ -252,16 +252,6 @@ class EmailMonitorService {
   /// Check xem có đang monitoring không
   bool get isMonitoring => _isMonitoring;
 
-  /// Test notification (để test UI)
-  Future<void> testNotification() async {
-    await _notificationService.showNotification(
-      title: '📧 Email test',
-      body: 'Đây là thông báo test từ GuardMail',
-      type: 'test',
-      data: {'test': 'true'},
-    );
-  }
-
   /// Check email ngay lập tức (không đợi timer)
   /// Được gọi từ UI button
   Future<void> checkNow() async {
