@@ -8,6 +8,8 @@ import '../services/notification_service.dart';
 import 'email_ai_chat_screen.dart';
 import 'compose_email_screen.dart';
 
+enum _EmailDetailMenuAction { reply, forward, compose }
+
 class EmailDetailScreen extends StatefulWidget {
   final EmailMessage email;
 
@@ -111,38 +113,38 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        title: const Text(
-          'Chi tiết Email',
-          style: TextStyle(
-            color: Color(0xFF202124),
-            fontWeight: FontWeight.w600,
-          ),
+        titleSpacing: 16,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Text(
+              'WardMail',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF202124),
+              ),
+            ),
+            SizedBox(width: 6),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: Color(0xFF1877F2),
+                shape: BoxShape.circle,
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(2.0),
+                child: Icon(
+                  Icons.check,
+                  size: 12,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
         ),
         elevation: 0,
         iconTheme: const IconThemeData(color: Color(0xFF5F6368)),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            tooltip: 'Soạn email mới',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ComposeEmailScreen(),
-                ),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.reply),
-            tooltip: 'Trả lời',
-            onPressed: _handleReply,
-          ),
-          IconButton(
-            icon: const Icon(Icons.forward),
-            tooltip: 'Chuyển tiếp',
-            onPressed: _handleForward,
-          ),
           IconButton(
             icon: const Icon(Icons.auto_awesome),
             tooltip: 'Hỏi AI về email',
@@ -154,6 +156,52 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
                 ),
               );
             },
+          ),
+          PopupMenuButton<_EmailDetailMenuAction>(
+            onSelected: (action) {
+              switch (action) {
+                case _EmailDetailMenuAction.reply:
+                  _handleReply();
+                  break;
+                case _EmailDetailMenuAction.forward:
+                  _handleForward();
+                  break;
+                case _EmailDetailMenuAction.compose:
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ComposeEmailScreen(),
+                    ),
+                  );
+                  break;
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: _EmailDetailMenuAction.reply,
+                child: ListTile(
+                  leading: Icon(Icons.reply),
+                  title: Text('Trả lời'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: _EmailDetailMenuAction.forward,
+                child: ListTile(
+                  leading: Icon(Icons.forward),
+                  title: Text('Chuyển tiếp'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: _EmailDetailMenuAction.compose,
+                child: ListTile(
+                  leading: Icon(Icons.edit),
+                  title: Text('Soạn email mới'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -406,6 +454,8 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
   }
 
   Widget _buildEmailContent() {
+    final bodyText = _decodeHtmlEntities(widget.email.body ?? widget.email.snippet);
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(20),
@@ -457,7 +507,7 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
               border: Border.all(color: Colors.grey[200]!),
             ),
             child: Text(
-              widget.email.body ?? widget.email.snippet,
+              bodyText,
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[800],
@@ -468,6 +518,32 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
         ],
       ),
     );
+  }
+
+  String _decodeHtmlEntities(String input) {
+    if (input.isEmpty) return input;
+
+    var result = input
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#39;', "'");
+
+    // Numeric entities: &#NNN;
+    result = result.replaceAllMapped(
+      RegExp(r'&#(\d+);'),
+      (m) {
+        try {
+          final code = int.parse(m.group(1)!);
+          return String.fromCharCode(code);
+        } catch (_) {
+          return m.group(0)!;
+        }
+      },
+    );
+
+    return result;
   }
 
   Widget _buildInfoRow(String label, String value) {

@@ -1,4 +1,4 @@
-# GuardMail - Hệ Thống Phát Hiện Email Phishing Thông Minh
+# WardMail - Hệ Thống Phát Hiện Email Phishing Thông Minh
 
 <div align="center">
 
@@ -18,7 +18,7 @@
 
 ## 📖 Giới Thiệu
 
-**GuardMail** là ứng dụng mobile được phát triển nhằm bảo vệ người dùng khỏi các cuộc tấn công phishing qua email. Sử dụng AI (Google Gemini) để phân tích nội dung email và đưa ra cảnh báo kịp thời.
+**WardMail** là ứng dụng mobile được phát triển nhằm bảo vệ người dùng khỏi các cuộc tấn công phishing qua email. Sử dụng AI (Google Gemini) để phân tích nội dung email và đưa ra cảnh báo kịp thời.
 
 ### 🎯 Mục Tiêu
 - ✅ Phát hiện email phishing với độ chính xác cao
@@ -509,7 +509,7 @@ Battery Impact: Low (WorkManager optimization)
 ### System Architecture
 ```
 ┌─────────────────────────────────────────┐
-│           GuardMail Mobile App          │
+│           WardMail Mobile App          │
 ├─────────────────────────────────────────┤
 │  UI Layer (Flutter Screens)             │
 ├─────────────────────────────────────────┤
@@ -706,6 +706,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **⭐ Star this repo if you find it useful!**
 
-Made with ❤️ by GuardMail Team
+Made with ❤️ by WardMail Team
 
 </div>

@@ -78,7 +78,7 @@ graph TD
 
 ### Bước 1: Install dependencies
 ```bash
-cd D:\DATN\DATN---GuardMail
+cd D:\DATN\DATN---WardMail
 flutter pub get
 ```
 
@@ -156,7 +156,7 @@ Android có thể kill background tasks để tiết kiệm pin. Để đảm b�
 
 ### Option 1: User tự disable (recommended)
 ```
-Settings → Apps → GuardMail → Battery → Unrestricted
+Settings → Apps → WardMail → Battery → Unrestricted
 ```
 
 ### Option 2: Request programmatically (aggressive)
@@ -207,7 +207,7 @@ adb logcat | grep "BACKGROUND TASK"
 
 **Nguyên nhân 1: Battery optimization**
 ```
-Settings → Apps → GuardMail → Battery → Unrestricted
+Settings → Apps → WardMail → Battery → Unrestricted
 ```
 
 **Nguyên nhân 2: Background task chưa register**

@@ -155,7 +155,7 @@ void dispose() {
 
 **Nguyên nhân 1: Quyền notification chưa bật**
 ```
-Settings → Apps → GuardMail → Notifications → Bật ON
+Settings → Apps → WardMail → Notifications → Bật ON
 ```
 
 **Nguyên nhân 2: Gmail API lỗi**

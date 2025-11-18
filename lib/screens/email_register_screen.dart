@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../services/recaptcha_service.dart';
+import '../widgets/guardmail_logo.dart';
 
 class EmailRegisterScreen extends StatefulWidget {
   const EmailRegisterScreen({super.key});
@@ -146,37 +147,13 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF34A853), Color(0xFF4285F4)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF34A853).withValues(alpha: 0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.person_add_alt_1_rounded,
-                      size: 64,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Đăng ký tài khoản',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF202124),
+                  const SizedBox(height: 8),
+                  const Center(
+                    child: GuardMailLogo(
+                      size: 72,
+                      showTitle: true,
+                      titleFontSize: 22,
+                      spacing: 10,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -184,11 +161,11 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
                     'Tạo tài khoản mới để tiếp tục',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 13,
                       color: Colors.grey[600],
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 28),
                   if (_errorMessage != null)
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -426,7 +403,7 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
                     height: 56,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF34A853), Color(0xFF4285F4)],
+                        colors: [Color(0xFF4285F4), Color(0xFFEA4335)],
                       ),
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [

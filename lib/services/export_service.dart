@@ -28,7 +28,7 @@ class ExportService {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(
-                  'GuardMail - Báo cáo phát hiện Phishing',
+                  'WardMail - Báo cáo phát hiện Phishing',
                   style: pw.TextStyle(
                     fontSize: 24,
                     fontWeight: pw.FontWeight.bold,
@@ -145,7 +145,7 @@ class ExportService {
           pw.Divider(),
           pw.SizedBox(height: 8),
           pw.Text(
-            '© GuardMail - Hệ thống phát hiện phishing email',
+            '© WardMail - Hệ thống phát hiện phishing email',
             style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
             textAlign: pw.TextAlign.center,
           ),
@@ -155,7 +155,7 @@ class ExportService {
 
     final directory = await getApplicationDocumentsDirectory();
     final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-    final path = '${directory.path}/guardmail_report_$timestamp.pdf';
+    final path = '${directory.path}/wardmail_report_$timestamp.pdf';
     final file = File(path);
     await file.writeAsBytes(await pdf.save());
     
@@ -241,7 +241,7 @@ class ExportService {
     
     final directory = await getApplicationDocumentsDirectory();
     final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-    final path = '${directory.path}/guardmail_report_$timestamp.csv';
+    final path = '${directory.path}/wardmail_report_$timestamp.csv';
     final file = File(path);
     await file.writeAsString(csv);
     

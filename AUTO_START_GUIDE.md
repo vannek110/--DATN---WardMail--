@@ -2,7 +2,7 @@
 
 ## 🚀 Tính Năng Tự Động
 
-App GuardMail giờ đã **TỰ ĐỘNG** monitor và phân tích email mà **KHÔNG CẦN** bạn phải làm gì!
+App WardMail giờ đã **TỰ ĐỘNG** monitor và phân tích email mà **KHÔNG CẦN** bạn phải làm gì!
 
 ### ✅ Đã Cài Đặt Sẵn
 
@@ -138,7 +138,7 @@ SwitchListTile(
 **Kiểm tra:**
 1. AndroidManifest.xml có permission `RECEIVE_BOOT_COMPLETED` chưa? ✅
 2. App có bị Battery Optimization chặn không?
-   - Vào Settings → Apps → GuardMail → Battery → "Unrestricted"
+   - Vào Settings → Apps → WardMail → Battery → "Unrestricted"
 3. WorkManager có đang hoạt động không?
    - Check logs: `adb logcat | grep WorkManager`
 
@@ -157,7 +157,7 @@ SwitchListTile(
 - Oppo/Realme (ColorOS)
 
 **Giải pháp:**
-1. Vào Settings → Apps → GuardMail
+1. Vào Settings → Apps → WardMail
 2. Bật "Autostart"
 3. Bật "Run in background"
 4. Tắt "Battery optimization"
@@ -186,7 +186,7 @@ SwitchListTile(
    - Gmail credentials cần được lưu
 
 2. **Cho phép Background Activity**
-   - Settings → Apps → GuardMail → Battery → Unrestricted
+   - Settings → Apps → WardMail → Battery → Unrestricted
 
 3. **Không Force Stop App**
    - Force stop sẽ kill tất cả background tasks

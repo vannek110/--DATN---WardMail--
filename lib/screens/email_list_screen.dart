@@ -22,7 +22,6 @@ class _EmailListScreenState extends State<EmailListScreen> {
   final GmailService _gmailService = GmailService();
   final AuthService _authService = AuthService();
   final ScanHistoryService _scanHistoryService = ScanHistoryService();
-  final TextEditingController _searchController = TextEditingController();
   List<EmailMessage> _emails = [];
   List<EmailMessage> _filteredEmails = [];
   Map<String, ScanResult> _scanResults = {}; // Map emailId -> ScanResult
@@ -56,8 +55,32 @@ class _EmailListScreenState extends State<EmailListScreen> {
 
   @override
   void dispose() {
-    _searchController.dispose();
     super.dispose();
+  }
+
+  String _decodeHtmlEntities(String input) {
+    if (input.isEmpty) return input;
+
+    var result = input
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#39;', "'");
+
+    result = result.replaceAllMapped(
+      RegExp(r'&#(\d+);'),
+      (m) {
+        try {
+          final code = int.parse(m.group(1)!);
+          return String.fromCharCode(code);
+        } catch (_) {
+          return m.group(0)!;
+        }
+      },
+    );
+
+    return result;
   }
 
   Future<String> _buildCacheKey() async {
@@ -236,159 +259,98 @@ class _EmailListScreenState extends State<EmailListScreen> {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        titleSpacing: 0,
-        title: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Container
-          (
-            height: 40,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F3F4),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: TextField(
-              controller: _searchController,
-              decoration: const InputDecoration(
-                hintText: 'Tìm kiếm trong email',
-                border: InputBorder.none,
-                prefixIcon: Icon(Icons.search, color: Color(0xFF5F6368)),
-                contentPadding: EdgeInsets.symmetric(vertical: 10),
-              ),
-              textInputAction: TextInputAction.search,
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                  _filteredEmails = _filterEmails(_emails);
-                });
-              },
-            ),
-          ),
-        ),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF5F6368)),
-        bottom: TabBar(
-          indicatorColor: const Color(0xFF4285F4),
-          labelColor: const Color(0xFF4285F4),
-          unselectedLabelColor: Colors.grey,
-          onTap: (index) {
-            String folder;
-            switch (index) {
-              case 1:
-                folder = 'sent';
-                break;
-              case 2:
-                folder = 'trash';
-                break;
-              default:
-                folder = 'inbox';
-            }
-            if (folder != _selectedFolder) {
-              setState(() {
-                _selectedFolder = folder;
-                _selectionMode = false;
-                _selectedEmailIds.clear();
-
-                // Lấy dữ liệu theo folder mới từ cache RAM nếu có
-                final cached = _folderMemoryCache[folder] ?? <EmailMessage>[];
-                _emails = cached;
-                _filteredEmails = _filterEmails(cached);
-                _isLoading = cached.isEmpty; // chỉ show loading full nếu chưa có data
-                _errorMessage = null;
-              });
-              // Nếu chưa có trong RAM, thử load nhanh từ SharedPreferences
-              if ((_folderMemoryCache[folder] ?? const <EmailMessage>[]).isEmpty) {
-                _loadCachedEmails();
-              }
-              // Luôn refresh nền để lấy dữ liệu mới nhất
-              _loadEmails();
-            }
-          },
-          tabs: const [
-            Tab(text: 'Hộp thư đến'),
-            Tab(text: 'Đã gửi'),
-            Tab(text: 'Thùng rác'),
-          ],
-        ),
-        actions: [
-          if (_selectedFolder == 'trash' && _selectionMode) ...[
-            IconButton(
-              icon: const Icon(Icons.undo),
-              tooltip: 'Khôi phục email đã chọn',
-              onPressed: _restoreSelectedEmails,
-            ),
-            IconButton(
-              icon: const Icon(Icons.close),
-              tooltip: 'Thoát chế độ chọn',
-              onPressed: () {
-                setState(() {
-                  _selectionMode = false;
-                  _selectedEmailIds.clear();
-                });
-              },
-            ),
-          ] else if (_selectedFolder == 'trash') ...[
-            IconButton(
-              icon: const Icon(Icons.check_box),
-              tooltip: 'Chọn email trong Thùng rác',
-              onPressed: () {
-                setState(() {
-                  _selectionMode = true;
-                  _selectedEmailIds.clear();
-                });
-              },
-            ),
-          ] else if (_selectedFolder == 'inbox' && _selectionMode) ...[
-            IconButton(
-              icon: const Icon(Icons.delete),
-              tooltip: 'Xóa email đã chọn',
-              onPressed: _deleteSelectedEmails,
-            ),
-            IconButton(
-              icon: const Icon(Icons.close),
-              tooltip: 'Thoát chế độ chọn',
-              onPressed: () {
-                setState(() {
-                  _selectionMode = false;
-                  _selectedEmailIds.clear();
-                });
-              },
-            ),
-          ] else if (_selectedFolder == 'inbox') ...[
-            IconButton(
-              icon: const Icon(Icons.check_box),
-              tooltip: 'Chọn email trong Hộp thư đến',
-              onPressed: () {
-                setState(() {
-                  _selectionMode = true;
-                  _selectedEmailIds.clear();
-                });
-              },
-            ),
-          ],
-          IconButton(
-            icon: const Icon(Icons.auto_awesome),
-            tooltip: 'Chat AI Gmail',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const GmailAiChatScreen(),
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          titleSpacing: 16,
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Text(
+                'WardMail',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF202124),
                 ),
-              );
-            },
+              ),
+              SizedBox(width: 6),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Color(0xFF1877F2),
+                  shape: BoxShape.circle,
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(2.0),
+                  child: Icon(
+                    Icons.check,
+                    size: 12,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
           ),
-          IconButton(
-            icon: Icon(
-              Icons.refresh_rounded,
-              color: _isLoading ? Colors.grey : const Color(0xFF4285F4),
+          bottom: TabBar(
+            indicatorColor: const Color(0xFF4285F4),
+            labelColor: const Color(0xFF4285F4),
+            unselectedLabelColor: Colors.grey,
+            onTap: changeFolderByTabIndex,
+            tabs: const [
+              Tab(text: 'Hộp thư đến'),
+              Tab(text: 'Đã gửi'),
+              Tab(text: 'Thùng rác'),
+            ],
+          ),
+          actions: [
+            if (_selectedFolder == 'trash' && _selectionMode) ...[
+              IconButton(
+                icon: const Icon(Icons.undo),
+                tooltip: 'Khôi phục email đã chọn',
+                onPressed: _restoreSelectedEmails,
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                tooltip: 'Thoát chế độ chọn',
+                onPressed: exitSelectionMode,
+              ),
+            ] else if (_selectedFolder == 'trash') ...[
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                tooltip: 'Chọn email trong Thùng rác',
+                onPressed: enterSelectionMode,
+              ),
+            ] else if (_selectedFolder == 'inbox' && _selectionMode) ...[
+              IconButton(
+                icon: const Icon(Icons.delete),
+                tooltip: 'Xóa email đã chọn',
+                onPressed: _deleteSelectedEmails,
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                tooltip: 'Thoát chế độ chọn',
+                onPressed: exitSelectionMode,
+              ),
+            ] else if (_selectedFolder == 'inbox') ...[
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                tooltip: 'Chọn email trong Hộp thư đến',
+                onPressed: enterSelectionMode,
+              ),
+            ],
+            IconButton(
+              icon: const Icon(Icons.auto_awesome),
+              tooltip: 'Chat AI Gmail',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const GmailAiChatScreen(),
+                  ),
+                );
+              },
             ),
-            onPressed: _isLoading ? null : _loadEmails,
-            tooltip: 'Làm mới',
-          ),
-        ],
-      ),
+          ],
+        ),
         body: _buildBody(),
         floatingActionButton: FloatingActionButton(
           onPressed: () async {
@@ -407,6 +369,78 @@ class _EmailListScreenState extends State<EmailListScreen> {
         ),
       ),
     );
+  }
+
+  // Public API để HomeScreen điều khiển tìm kiếm, folder và thao tác chọn
+  String get selectedFolder => _selectedFolder;
+  bool get selectionMode => _selectionMode;
+  bool get isLoading => _isLoading;
+
+  void updateSearchQuery(String value) {
+    setState(() {
+      _searchQuery = value;
+      _filteredEmails = _filterEmails(_emails);
+    });
+  }
+
+  Future<void> refreshEmails() async {
+    await _loadEmails();
+  }
+
+  void changeFolderByTabIndex(int index) {
+    String folder;
+    switch (index) {
+      case 1:
+        folder = 'sent';
+        break;
+      case 2:
+        folder = 'trash';
+        break;
+      default:
+        folder = 'inbox';
+    }
+
+    if (folder != _selectedFolder) {
+      setState(() {
+        _selectedFolder = folder;
+        _selectionMode = false;
+        _selectedEmailIds.clear();
+
+        final cached = _folderMemoryCache[folder] ?? <EmailMessage>[];
+        _emails = cached;
+        _filteredEmails = _filterEmails(cached);
+        _isLoading = cached.isEmpty;
+        _errorMessage = null;
+      });
+
+      if ((_folderMemoryCache[folder] ?? const <EmailMessage>[]).isEmpty) {
+        _loadCachedEmails();
+      }
+
+      _loadEmails();
+    }
+  }
+
+  void enterSelectionMode() {
+    setState(() {
+      _selectionMode = true;
+      _selectedEmailIds.clear();
+    });
+  }
+
+  void exitSelectionMode() {
+    setState(() {
+      _selectionMode = false;
+      _selectedEmailIds.clear();
+    });
+  }
+
+  Future<void> deleteSelectedEmailsFromOutside() async {
+    await _deleteSelectedEmails();
+  }
+
+  Future<void> restoreSelectedEmailsFromOutside() async {
+    await _restoreSelectedEmails();
   }
 
   Widget _buildBody() {
@@ -962,7 +996,7 @@ class _EmailListScreenState extends State<EmailListScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            email.snippet,
+            _decodeHtmlEntities(email.snippet),
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey[600],
@@ -1141,7 +1175,7 @@ class _EmailListScreenState extends State<EmailListScreen> {
                   constraints: const BoxConstraints(maxHeight: 250),
                   child: SingleChildScrollView(
                     child: Text(
-                      email.snippet,
+                      _decodeHtmlEntities(email.snippet),
                       style: const TextStyle(fontSize: 14),
                     ),
                   ),

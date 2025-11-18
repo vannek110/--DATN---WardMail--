@@ -120,12 +120,21 @@ class GmailService {
 
     final messageBuffer = StringBuffer();
 
+    String _encodeHeader(String value) {
+      final hasNonAscii = value.runes.any((r) => r > 127);
+      if (!hasNonAscii) return value;
+      final encoded = base64.encode(utf8.encode(value));
+      return '=?UTF-8?B?$encoded?=';
+    }
+
+    final encodedSubject = _encodeHeader(subject);
+
     if (attachments != null && attachments.isNotEmpty) {
       final boundary = 'guardmail_${DateTime.now().millisecondsSinceEpoch}';
 
       messageBuffer
         ..writeln('To: $to')
-        ..writeln('Subject: $subject')
+        ..writeln('Subject: $encodedSubject')
         ..writeln('MIME-Version: 1.0')
         ..writeln('Content-Type: multipart/mixed; boundary="$boundary"')
         ..writeln()
@@ -151,7 +160,7 @@ class GmailService {
     } else {
       messageBuffer
         ..writeln('To: $to')
-        ..writeln('Subject: $subject')
+        ..writeln('Subject: $encodedSubject')
         ..writeln('Content-Type: text/plain; charset="utf-8"')
         ..writeln()
         ..writeln(body);

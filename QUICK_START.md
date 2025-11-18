@@ -1,8 +1,8 @@
-# 🚀 Quick Start - GuardMail Auto Monitoring
+# 🚀 Quick Start - WardMail Auto Monitoring
 
 ## ✅ ĐÃ HOÀN THÀNH
 
-App GuardMail giờ đã **HOÀN TOÀN TỰ ĐỘNG**!
+App WardMail giờ đã **HOÀN TOÀN TỰ ĐỘNG**!
 
 ### 🎯 Bạn Chỉ Cần:
 1. **Đăng nhập** vào app
@@ -23,7 +23,7 @@ App GuardMail giờ đã **HOÀN TOÀN TỰ ĐỘNG**!
 
 ### Lần Đầu Sử Dụng:
 ```
-1. Mở app GuardMail
+1. Mở app WardMail
 2. Đăng nhập bằng Google/Email
 3. Xong! 🎉
 ```
@@ -147,20 +147,20 @@ Từ [Người gửi]
 
 **1. Kiểm tra permissions:**
 ```
-Settings → Apps → GuardMail → Permissions
+Settings → Apps → WardMail → Permissions
 ✅ Notifications: Allowed
 ✅ Background activity: Allowed
 ```
 
 **2. Tắt Battery Optimization:**
 ```
-Settings → Apps → GuardMail → Battery
+Settings → Apps → WardMail → Battery
 → Chọn "Unrestricted"
 ```
 
 **3. Bật Autostart (Xiaomi/Huawei/Oppo):**
 ```
-Settings → Apps → GuardMail
+Settings → Apps → WardMail
 → Bật "Autostart"
 → Bật "Run in background"
 ```
@@ -276,4 +276,4 @@ Giờ chỉ cần:
 
 **Version:** 2.0.0  
 **Last Updated:** 2025-01-12  
-**Author:** GuardMail Team
+**Author:** WardMail Team
