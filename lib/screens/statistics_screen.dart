@@ -30,19 +30,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     });
   }
 
-  Future<void> _generateMockData() async {
-    await _scanHistoryService.generateMockData();
-    _loadStatistics();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đã tạo dữ liệu mẫu'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -69,16 +56,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             icon: const Icon(Icons.more_vert),
             itemBuilder: (context) => [
               const PopupMenuItem(
-                value: 'mock',
-                child: Row(
-                  children: [
-                    Icon(Icons.data_usage, size: 20),
-                    SizedBox(width: 8),
-                    Text('Tạo dữ liệu mẫu'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
                 value: 'clear',
                 child: Row(
                   children: [
@@ -90,9 +67,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               ),
             ],
             onSelected: (value) async {
-              if (value == 'mock') {
-                _generateMockData();
-              } else if (value == 'clear') {
+              if (value == 'clear') {
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
@@ -161,17 +136,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _generateMockData,
-              icon: const Icon(Icons.data_usage),
-              label: const Text('Tạo dữ liệu mẫu'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4285F4),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
             ),
           ],

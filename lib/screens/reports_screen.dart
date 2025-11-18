@@ -20,6 +20,7 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
   List<ScanResult> _allScans = [];
   bool _isLoading = true;
   bool _isExporting = false;
+  String _selectedRange = '7'; // '7', '30', 'all'
 
   @override
   void initState() {
@@ -217,7 +218,7 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
   }
 
   Widget _buildTrendsTab() {
-    final last7DaysScans = _statistics['last7DaysScans'] as List<ScanResult>? ?? [];
+    final scansForChart = _getScansForRange();
     
     return RefreshIndicator(
       onRefresh: _loadData,
@@ -227,13 +228,61 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildTimelineChart(last7DaysScans),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                ChoiceChip(
+                  label: const Text('7 ngày'),
+                  selected: _selectedRange == '7',
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() => _selectedRange = '7');
+                    }
+                  },
+                ),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: const Text('30 ngày'),
+                  selected: _selectedRange == '30',
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() => _selectedRange = '30');
+                    }
+                  },
+                ),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: const Text('Tất cả'),
+                  selected: _selectedRange == 'all',
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() => _selectedRange = 'all');
+                    }
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _buildTimelineChart(scansForChart),
             const SizedBox(height: 24),
             _buildDailyBreakdown(),
           ],
         ),
       ),
     );
+  }
+
+  List<ScanResult> _getScansForRange() {
+    if (_selectedRange == 'all') {
+      return _allScans;
+    }
+
+    final days = int.tryParse(_selectedRange) ?? 7;
+    final now = DateTime.now();
+
+    return _allScans
+        .where((scan) => now.difference(scan.scanDate).inDays <= days)
+        .toList();
   }
 
   Widget _buildTimelineChart(List<ScanResult> scans) {
@@ -270,9 +319,13 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Xu hướng 7 ngày qua',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Text(
+            _selectedRange == 'all'
+                ? 'Xu hướng toàn bộ thời gian'
+                : _selectedRange == '30'
+                    ? 'Xu hướng 30 ngày qua'
+                    : 'Xu hướng 7 ngày qua',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 20),
           SizedBox(

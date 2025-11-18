@@ -83,10 +83,10 @@ class _GmailAiChatScreenState extends State<GmailAiChatScreen> {
         await _geminiService.testConnection();
 
         final answer = await _geminiService.askQuestionAboutEmail(
-          anonymizedSubject: 'Hộp thư Gmail của tôi',
-          anonymizedBody:
-              'Danh sách email trong Gmail (không gửi nội dung cụ thể để bảo vệ riêng tư).',
-          anonymizedFrom: 'gmail.com',
+          subject: 'Hộp thư Gmail của tôi',
+          body:
+              'Danh sách email trong Gmail, không gửi nội dung cụ thể để bảo vệ riêng tư.',
+          from: 'gmail.com',
           question: question,
         );
 

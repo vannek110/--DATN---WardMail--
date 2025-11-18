@@ -142,6 +142,13 @@ class EmailMonitorService {
       final scanHistoryService = ScanHistoryService();
       final storage = const FlutterSecureStorage();
       
+      // Nếu email đã được phân tích (và không phải unknown) thì bỏ qua để tiết kiệm token
+      final latestScan = await scanHistoryService.getLatestScanForEmail(email.id);
+      if (latestScan != null && latestScan.result != 'unknown') {
+        print('ℹ️ Email already analyzed, skipping silent AI: ${email.subject}');
+        return;
+      }
+      
       // Phân tích AI (chạy ngầm)
       final result = await analysisService.analyzeEmail(email);
       

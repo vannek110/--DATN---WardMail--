@@ -37,14 +37,15 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
           ..sort((a, b) => b.scanDate.compareTo(a.scanDate));
     final latestScan = scansForEmail.isNotEmpty ? scansForEmail.first : null;
 
-    if (latestScan != null) {
-      setState(() {
-        _scanResult = latestScan;
-      });
-    }
+    if (!mounted || latestScan == null) return;
+
+    setState(() {
+      _scanResult = latestScan;
+    });
   }
 
   Future<void> _analyzeEmail() async {
+    if (!mounted) return;
     setState(() => _isAnalyzing = true);
 
     try {
@@ -72,9 +73,11 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
         );
       }
 
-      setState(() {
-        _scanResult = result;
-      });
+      if (mounted) {
+        setState(() {
+          _scanResult = result;
+        });
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -94,7 +97,9 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
         );
       }
     } finally {
-      setState(() => _isAnalyzing = false);
+      if (mounted) {
+        setState(() => _isAnalyzing = false);
+      }
     }
   }
 

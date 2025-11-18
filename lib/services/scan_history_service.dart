@@ -24,6 +24,15 @@ class ScanHistoryService {
     return jsonList.map((json) => ScanResult.fromJson(json)).toList();
   }
 
+  /// Lấy lần phân tích mới nhất cho một email theo emailId
+  Future<ScanResult?> getLatestScanForEmail(String emailId) async {
+    final history = await getScanHistory();
+    final scansForEmail = history.where((r) => r.emailId == emailId).toList()
+      ..sort((a, b) => b.scanDate.compareTo(a.scanDate));
+    if (scansForEmail.isEmpty) return null;
+    return scansForEmail.first;
+  }
+
   Future<Map<String, dynamic>> getStatistics() async {
     final history = await getScanHistory();
     
@@ -121,91 +130,5 @@ class ScanHistoryService {
   Future<void> clearHistory() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_scanHistoryKey);
-  }
-
-  Future<void> generateMockData() async {
-    final mockResults = [
-      ScanResult(
-        id: '1',
-        emailId: 'email1',
-        from: 'security@paypal-verify.com',
-        subject: 'Urgent: Verify your account',
-        scanDate: DateTime.now().subtract(const Duration(days: 1)),
-        result: 'phishing',
-        confidenceScore: 0.92,
-        detectedThreats: ['Suspicious URL', 'Fake sender', 'Urgency tactics'],
-        analysisDetails: {'reason': 'Suspicious domain and urgent language'},
-      ),
-      ScanResult(
-        id: '2',
-        emailId: 'email2',
-        from: 'noreply@google.com',
-        subject: 'Your Google Account Security Alert',
-        scanDate: DateTime.now().subtract(const Duration(days: 2)),
-        result: 'safe',
-        confidenceScore: 0.98,
-        detectedThreats: [],
-        analysisDetails: {'reason': 'Verified sender and legitimate domain'},
-      ),
-      ScanResult(
-        id: '3',
-        emailId: 'email3',
-        from: 'unknown@tempmail.com',
-        subject: 'You won a prize!',
-        scanDate: DateTime.now().subtract(const Duration(days: 3)),
-        result: 'phishing',
-        confidenceScore: 0.89,
-        detectedThreats: ['Too good to be true', 'Suspicious domain'],
-        analysisDetails: {'reason': 'Lottery scam pattern detected'},
-      ),
-      ScanResult(
-        id: '4',
-        emailId: 'email4',
-        from: 'support@amazon.com',
-        subject: 'Your order has been shipped',
-        scanDate: DateTime.now().subtract(const Duration(days: 4)),
-        result: 'safe',
-        confidenceScore: 0.95,
-        detectedThreats: [],
-        analysisDetails: {'reason': 'Verified Amazon sender'},
-      ),
-      ScanResult(
-        id: '5',
-        emailId: 'email5',
-        from: 'info@bank-security.net',
-        subject: 'Suspicious activity on your account',
-        scanDate: DateTime.now().subtract(const Duration(days: 5)),
-        result: 'suspicious',
-        confidenceScore: 0.75,
-        detectedThreats: ['Suspicious domain', 'Urgent action required'],
-        analysisDetails: {'reason': 'Domain doesn\'t match bank\'s official domain'},
-      ),
-      ScanResult(
-        id: '6',
-        emailId: 'email6',
-        from: 'newsletter@company.com',
-        subject: 'Weekly newsletter',
-        scanDate: DateTime.now().subtract(const Duration(days: 6)),
-        result: 'safe',
-        confidenceScore: 0.97,
-        detectedThreats: [],
-        analysisDetails: {'reason': 'Legitimate newsletter'},
-      ),
-      ScanResult(
-        id: '7',
-        emailId: 'email7',
-        from: 'admin@microsft-support.com',
-        subject: 'Your Microsoft account will be deleted',
-        scanDate: DateTime.now().subtract(const Duration(days: 7)),
-        result: 'phishing',
-        confidenceScore: 0.94,
-        detectedThreats: ['Typosquatting', 'Threatening language', 'Fake sender'],
-        analysisDetails: {'reason': 'Misspelled domain (microsft vs microsoft)'},
-      ),
-    ];
-
-    for (var result in mockResults) {
-      await saveScanResult(result);
-    }
   }
 }

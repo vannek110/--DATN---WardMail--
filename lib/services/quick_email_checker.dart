@@ -33,9 +33,24 @@ class QuickEmailChecker {
 
       print('Found ${emails.length} emails total');
 
+      // Danh sách ID hiện tại
+      final currentIds = emails.map((e) => e.id).toList();
+
       // Load danh sách email IDs đã check
       final previousIdsJson = await _storage.read(key: _emailIdsKey);
-      final previousIds = previousIdsJson?.split(',') ?? [];
+
+      // Lần đầu chạy: chỉ lưu baseline, KHÔNG phân tích các email cũ
+      if (previousIdsJson == null || previousIdsJson.isEmpty) {
+        await _storage.write(
+          key: _emailIdsKey,
+          value: currentIds.join(','),
+        );
+        print(
+            'First quick check - initialized baseline with ${currentIds.length} emails, no analysis to avoid scanning old emails.');
+        return 0;
+      }
+
+      final previousIds = previousIdsJson.split(',');
 
       // Lọc emails mới
       final newEmails = emails
@@ -60,11 +75,10 @@ class QuickEmailChecker {
         }
       }
 
-      // Cập nhật danh sách IDs
-      final newIds = emails.map((e) => e.id).toList();
+      // Cập nhật danh sách IDs với snapshot hiện tại
       await _storage.write(
         key: _emailIdsKey,
-        value: newIds.join(','),
+        value: currentIds.join(','),
       );
 
       print('✅ Quick check completed: $analyzed/${newEmails.length} analyzed');
@@ -80,6 +94,13 @@ class QuickEmailChecker {
     print('🔍 Analyzing: ${email.subject}');
     
     try {
+      // Nếu email đã được phân tích (và không phải unknown) thì bỏ qua để tiết kiệm token
+      final latestScan = await _scanHistoryService.getLatestScanForEmail(email.id);
+      if (latestScan != null && latestScan.result != 'unknown') {
+        print('ℹ️ Email already analyzed (quick check), skipping AI: ${email.subject}');
+        return;
+      }
+      
       // Phân tích email bằng AI
       final result = await _analysisService.analyzeEmail(email);
       

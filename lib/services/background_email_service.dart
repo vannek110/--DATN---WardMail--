@@ -95,9 +95,25 @@ Future<void> _checkAndAnalyzeEmails() async {
       return;
     }
 
+    // Danh sách ID hiện tại
+    final currentIds = emails.map((e) => e.id).toList();
+
     // Load danh sách email IDs đã check
-    final previousIdsJson = await storage.read(key: BackgroundEmailService._emailIdsKey);
-    final previousIds = previousIdsJson?.split(',') ?? [];
+    final previousIdsJson =
+        await storage.read(key: BackgroundEmailService._emailIdsKey);
+
+    // Lần đầu chạy: chỉ lưu baseline, KHÔNG phân tích các email cũ
+    if (previousIdsJson == null || previousIdsJson.isEmpty) {
+      await storage.write(
+        key: BackgroundEmailService._emailIdsKey,
+        value: currentIds.join(','),
+      );
+      print(
+          'First background check - initialized baseline with ${currentIds.length} emails, no analysis to avoid scanning old emails.');
+      return;
+    }
+
+    final previousIds = previousIdsJson.split(',');
 
     // Lọc emails mới
     final newEmails = emails
@@ -116,11 +132,10 @@ Future<void> _checkAndAnalyzeEmails() async {
       await _analyzeAndNotify(email, analysisService, notificationService, scanHistoryService, storage);
     }
 
-    // Cập nhật danh sách IDs
-    final newIds = emails.map((e) => e.id).toList();
+    // Cập nhật danh sách IDs với snapshot hiện tại
     await storage.write(
       key: BackgroundEmailService._emailIdsKey,
-      value: newIds.join(','),
+      value: currentIds.join(','),
     );
 
     print('Updated email IDs list');
@@ -140,6 +155,13 @@ Future<void> _analyzeAndNotify(
 ) async {
   try {
     print('Analyzing email: ${email.subject}');
+    
+    // Nếu email đã được phân tích (và không phải unknown) thì bỏ qua để tiết kiệm token
+    final latestScan = await scanHistoryService.getLatestScanForEmail(email.id);
+    if (latestScan != null && latestScan.result != 'unknown') {
+      print('ℹ️ Email already analyzed (background), skipping AI: ${email.subject}');
+      return;
+    }
     
     // Phân tích email bằng AI
     final result = await analysisService.analyzeEmail(email);

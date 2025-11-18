@@ -1,24 +1,18 @@
 import 'dart:math';
 import '../models/email_message.dart';
 import '../models/scan_result.dart';
-import 'anonymization_service.dart';
 import 'gemini_analysis_service.dart';
 
 class EmailAnalysisService {
-  final AnonymizationService _anonymizationService = AnonymizationService();
   final GeminiAnalysisService _geminiService = GeminiAnalysisService();
 
   Future<ScanResult> analyzeEmail(EmailMessage email) async {
-    // Reset anonymization service cho email mới
-    _anonymizationService.reset();
-    
     final threats = <String>[];
     double riskScore = 0.0;
     String result = 'unknown';
     
     // Kết quả Gemini
     GeminiAnalysisResult? geminiResult;
-    Map<String, dynamic>? anonymizationInfo;
     final senderDomain = _extractDomain(email.from);
 
     try {
@@ -27,22 +21,16 @@ class EmailAnalysisService {
       print('From: ${email.from}');
       print('Subject: ${email.subject}');
       print('========================================');
-      // Bước 1: Làm mờ dữ liệu cá nhân
-      print('Step 1: Anonymizing email...');
-      anonymizationInfo = _anonymizationService.anonymizeEmail(
-        subject: email.subject,
-        body: email.body ?? email.snippet,
-        from: email.from,
-      );
-      print('Anonymization complete');
+      // Chuẩn bị nội dung email (có giới hạn độ dài để tiết kiệm token)
+      print('Step 1: Preparing email content...');
+      final truncatedBody = _truncate(email.body ?? email.snippet);
 
-      // Bước 2: Gửi email đã làm mờ lên Gemini
+      // Gửi email gốc (không làm mờ) lên Gemini để phân tích chính xác hơn
       print('Step 2: Sending to Gemini...');
-      final anonymizedBody = _truncate(anonymizationInfo['body'] as String);
       geminiResult = await _geminiService.analyzeEmail(
-        anonymizedSubject: anonymizationInfo['subject'],
-        anonymizedBody: anonymizedBody,
-        anonymizedFrom: anonymizationInfo['from'],
+        subject: email.subject,
+        body: truncatedBody,
+        from: email.from,
       );
       print('Gemini analysis complete!');
       print('Risk Score: ${geminiResult.riskScore}');
@@ -109,14 +97,6 @@ class EmailAnalysisService {
       };
     }
 
-    // Thêm thông tin anonymization nếu có
-    if (anonymizationInfo != null) {
-      analysisDetails['anonymization'] = {
-        'entityCount': anonymizationInfo['entityCount'],
-        'hasPersonalData': (anonymizationInfo['entityCount'] as Map).values.any((count) => count > 0),
-      };
-    }
-
     return ScanResult(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       emailId: email.id,
@@ -131,20 +111,12 @@ class EmailAnalysisService {
   }
 
   Future<String> askAiAboutEmail(EmailMessage email, String question) async {
-    _anonymizationService.reset();
-
-    final anonymizationInfo = _anonymizationService.anonymizeEmail(
-      subject: email.subject,
-      body: email.body ?? email.snippet,
-      from: email.from,
-    );
-
-    final anonymizedBody = _truncate(anonymizationInfo['body'] as String);
+    final truncatedBody = _truncate(email.body ?? email.snippet);
 
     final answer = await _geminiService.askQuestionAboutEmail(
-      anonymizedSubject: anonymizationInfo['subject'],
-      anonymizedBody: anonymizedBody,
-      anonymizedFrom: anonymizationInfo['from'],
+      subject: email.subject,
+      body: truncatedBody,
+      from: email.from,
       question: question,
     );
 

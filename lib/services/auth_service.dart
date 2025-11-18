@@ -80,8 +80,10 @@ class AuthService {
   Future<void> signOut() async {
     await _auth.signOut();
     await _googleSignIn.signOut();
+
+    // Chỉ xóa dữ liệu đăng nhập, KHÔNG xóa lịch sử phân tích / thông báo
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+    await prefs.remove('user_data');
   }
 
   Future<bool> isSignedIn() async {

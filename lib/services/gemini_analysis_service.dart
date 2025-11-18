@@ -26,9 +26,9 @@ class GeminiAnalysisService {
   }
   
   Future<String> askQuestionAboutEmail({
-    required String anonymizedSubject,
-    required String anonymizedBody,
-    required String anonymizedFrom,
+    required String subject,
+    required String body,
+    required String from,
     required String question,
   }) async {
     int maxRetries = _availableModels.length;
@@ -42,19 +42,21 @@ class GeminiAnalysisService {
         );
 
         final prompt = '''
-Bạn là trợ lý an toàn email. Dưới đây là nội dung một email (đã được ẩn bớt thông tin riêng tư):
+Bạn là trợ lý an toàn email.
 
-FROM: $anonymizedFrom
-SUBJECT: $anonymizedSubject
-BODY: $anonymizedBody
+FROM: $from
+SUBJECT: $subject
+BODY:
+$body
 
-Người dùng đang hỏi về email này:
+Câu hỏi của người dùng về email này:
 "$question"
 
-Yêu cầu trả lời:
-- Trả lời bằng tiếng Việt.
-- Giải thích ngắn gọn, dễ hiểu, tập trung vào nội dung và mức độ an toàn của email.
-- Nếu không đủ dữ liệu để trả lời chính xác, hãy nói rõ bạn không chắc và gợi ý người dùng nên làm gì.
+Trả lời bằng tiếng Việt, rõ ràng và ngắn gọn, ưu tiên phân tích các đường link/URL trong email:
+- Đánh giá mức độ an toàn/nguy hiểm của email, đặc biệt dựa trên domain người gửi và các URL trong nội dung.
+- Chỉ ra cụ thể URL hoặc domain nào đáng ngờ (nếu có) và lý do.
+- Đưa ra 1-3 bước cụ thể người dùng nên làm (ví dụ: không bấm link, kiểm tra domain, báo cáo spam...).
+Nếu thông tin chưa đủ để kết luận, hãy nói rõ điều đó.
 ''';
 
         final response = await chatModel.generateContent([Content.text(prompt)]);
@@ -94,11 +96,11 @@ Yêu cầu trả lời:
     }
   }
 
-  /// Bước 6: Gửi email đã làm mờ lên Gemini để phân tích
+  /// Gửi email lên Gemini để phân tích phishing
   Future<GeminiAnalysisResult> analyzeEmail({
-    required String anonymizedSubject,
-    required String anonymizedBody,
-    required String anonymizedFrom,
+    required String subject,
+    required String body,
+    required String from,
   }) async {
     int maxRetries = _availableModels.length; // Thử tất cả models
     int attempt = 0;
@@ -107,12 +109,12 @@ Yêu cầu trả lời:
       try {
         print('=== GEMINI ANALYSIS START (Model: $_currentModel) ===');
         print('Attempt: ${attempt + 1}/$maxRetries');
-        print('Subject: ${anonymizedSubject.substring(0, anonymizedSubject.length > 50 ? 50 : anonymizedSubject.length)}...');
+        print('Subject: ${subject.substring(0, subject.length > 50 ? 50 : subject.length)}...');
         
         final prompt = _buildAnalysisPrompt(
-          subject: anonymizedSubject,
-          body: anonymizedBody,
-          from: anonymizedFrom,
+          subject: subject,
+          body: body,
+          from: from,
         );
 
         print('Sending request to Gemini...');
@@ -133,9 +135,9 @@ Yêu cầu trả lời:
         if (result.classification == 'unknown' && result.confidence < 50) {
           print('First attempt resulted in unknown classification, retrying with simpler prompt...');
           return await _retryWithSimplePrompt(
-            subject: anonymizedSubject,
-            body: anonymizedBody,
-            from: anonymizedFrom,
+            subject: subject,
+            body: body,
+            from: from,
           );
         }
         
@@ -213,17 +215,17 @@ Quy tắc:
     required String from,
   }) {
     return '''
-Phân tích email phishing và CHỈ trả về MỘT JSON hợp lệ, không markdown, không text khác.
+Phân tích email có dấu hiệu phishing và CHỈ trả về MỘT JSON hợp lệ (không markdown, không text giải thích).
 
 FROM:$from
 SUBJECT:$subject
 BODY:$body
 
-JSON MẪU (giữ key, thay giá trị):
+JSON mẫu (giữ nguyên key, thay giá trị):
 {
   "risk_score": 15,
   "risk_level": "Low",
-  "summary": "tóm tắt",
+  "summary": "tóm tắt ngắn gọn",
   "detailed_analysis": {
     "sender_analysis": "phân tích người gửi",
     "content_analysis": "phân tích nội dung",
@@ -235,10 +237,9 @@ JSON MẪU (giữ key, thay giá trị):
 }
 
 Quy tắc:
-- risk_score 0-100 (0 an toàn, 100 rất nguy hiểm)
-- risk_level: Low / Medium / High / Critical
-- Không dùng dấu " trong string, nếu cần thì dùng '.
-- Không xuống dòng trong nội dung string.
+- risk_score: số 0-100 (0 an toàn, 100 rất nguy hiểm).
+- risk_level: một trong "Low", "Medium", "High", "Critical".
+- Không thêm text ngoài JSON.
 ''';
   }
 
