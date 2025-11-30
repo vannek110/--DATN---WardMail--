@@ -5,8 +5,8 @@ import '../models/scan_result.dart';
 import '../services/email_analysis_service.dart';
 import '../services/scan_history_service.dart';
 import '../services/notification_service.dart';
+import '../services/feedback_service.dart';
 import '../localization/app_localizations.dart';
-import '../widgets/email_feedback_widget.dart';
 import 'email_ai_chat_screen.dart';
 import 'compose_email_screen.dart';
 
@@ -25,7 +25,9 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
   final EmailAnalysisService _analysisService = EmailAnalysisService();
   final ScanHistoryService _scanHistoryService = ScanHistoryService();
   final NotificationService _notificationService = NotificationService();
-  
+  final FeedbackService _feedbackService = FeedbackService();
+  final TextEditingController _feedbackController = TextEditingController();
+
   ScanResult? _scanResult;
   bool _isAnalyzing = false;
 
@@ -33,6 +35,12 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
   void initState() {
     super.initState();
     _checkPreviousAnalysis();
+  }
+
+  @override
+  void dispose() {
+    _feedbackController.dispose();
+    super.dispose();
   }
 
   Future<void> _checkPreviousAnalysis() async {
@@ -56,9 +64,9 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
 
     try {
       final result = await _analysisService.analyzeEmail(widget.email);
-      
+
       await _scanHistoryService.saveScanResult(result);
-      
+
       final notificationData = {
         'email_id': widget.email.id,
         'from': widget.email.from,
@@ -75,27 +83,21 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
       if (result.isPhishing) {
         await _notificationService.showNotification(
           title: l.t('notif_phishing_title'),
-          body: l
-              .t('notif_phishing_body')
-              .replaceFirst('{from}', from),
+          body: l.t('notif_phishing_body').replaceFirst('{from}', from),
           type: 'phishing',
           data: notificationData,
         );
       } else if (result.isSuspicious) {
         await _notificationService.showNotification(
           title: l.t('notif_suspicious_title'),
-          body: l
-              .t('notif_suspicious_body')
-              .replaceFirst('{from}', from),
+          body: l.t('notif_suspicious_body').replaceFirst('{from}', from),
           type: 'security',
           data: notificationData,
         );
       } else {
         await _notificationService.showNotification(
           title: l.t('notif_safe_title'),
-          body: l
-              .t('notif_safe_body')
-              .replaceFirst('{from}', from),
+          body: l.t('notif_safe_body').replaceFirst('{from}', from),
           type: 'safe',
           data: notificationData,
         );
@@ -135,11 +137,71 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
     }
   }
 
+  // Derive safety checks from scan result to ensure consistency
+  Map<String, dynamic> _deriveSafetyFromScanResult(
+    ScanResult result,
+    String locale,
+  ) {
+    // If email is dangerous/suspicious, some criteria must fail
+    bool piiProtection = true;
+    bool antiPhishing = true;
+    bool informationAccuracy = true;
+    bool professionalTone = true;
+    bool compliance = true;
+
+    if (result.isPhishing) {
+      // Phishing emails fail anti-phishing and usually tone/accuracy
+      antiPhishing = false;
+      professionalTone = false;
+      informationAccuracy = false;
+    } else if (result.isSuspicious) {
+      // Suspicious emails might fail 1-2 criteria
+      if (result.detectedThreats.isNotEmpty) {
+        // Check threat types to determine which criteria failed
+        final threats = result.detectedThreats
+            .map((t) => t.toLowerCase())
+            .join(' ');
+        if (threats.contains('phish') || threats.contains('lừa')) {
+          antiPhishing = false;
+        }
+        if (threats.contains('spam') || threats.contains('rác')) {
+          professionalTone = false;
+        }
+        if (threats.contains('pii') || threats.contains('nhạy cảm')) {
+          piiProtection = false;
+        }
+      } else {
+        // Default: fail tone for suspicious
+        professionalTone = false;
+      }
+    }
+    // If safe, all pass (default values)
+
+    int passedCount = [
+      piiProtection,
+      antiPhishing,
+      informationAccuracy,
+      professionalTone,
+      compliance,
+    ].where((p) => p).length;
+
+    return {
+      'piiProtection': piiProtection,
+      'antiPhishing': antiPhishing,
+      'informationAccuracy': informationAccuracy,
+      'professionalTone': professionalTone,
+      'compliance': compliance,
+      'passedCount': passedCount,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
-    final onSurface = Theme.of(context).textTheme.bodyMedium?.color ?? const Color(0xFF202124);
+    final onSurface =
+        Theme.of(context).textTheme.bodyMedium?.color ??
+        const Color(0xFF202124);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -165,11 +227,7 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
               ),
               child: Padding(
                 padding: EdgeInsets.all(2.0),
-                child: Icon(
-                  Icons.check,
-                  size: 12,
-                  color: Colors.white,
-                ),
+                child: Icon(Icons.check, size: 12, color: Colors.white),
               ),
             ),
           ],
@@ -240,13 +298,7 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            if (_scanResult != null) ...[
-              _buildAnalysisResult(),
-              EmailFeedbackWidget(
-                emailId: widget.email.id,
-                onReanalyze: _analyzeEmail,
-              ),
-            ],
+            if (_scanResult != null) _buildAnalysisResult(),
             _buildEmailContent(),
             const SizedBox(height: 80),
           ],
@@ -302,8 +354,8 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
   }
 
   Widget? _buildAnalyzeFab() {
-    // Cho phép phân tích lần đầu hoặc phân tích lại nếu kết quả hiện tại là 'unknown'
-    final bool canAnalyze = _scanResult == null || _scanResult!.result == 'unknown';
+    final bool canAnalyze =
+        _scanResult == null || _scanResult!.result == 'unknown';
     if (!canAnalyze) return null;
 
     return FloatingActionButton.extended(
@@ -323,8 +375,8 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
         _isAnalyzing
             ? AppLocalizations.of(context).t('email_detail_analyzing')
             : (_scanResult == null
-                ? AppLocalizations.of(context).t('email_detail_analyze')
-                : AppLocalizations.of(context).t('email_detail_reanalyze')),
+                  ? AppLocalizations.of(context).t('email_detail_analyze')
+                  : AppLocalizations.of(context).t('email_detail_reanalyze')),
         style: const TextStyle(color: Colors.white),
       ),
     );
@@ -334,8 +386,8 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
     if (_scanResult == null) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final l = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).languageCode;
 
     Color statusColor;
     String statusText;
@@ -359,9 +411,12 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
       statusDescription = l.t('email_detail_status_safe_desc');
     }
 
+    // Get safety checks derived from actual scan result
+    final safetyChecks = _deriveSafetyFromScanResult(_scanResult!, locale);
+
     return Container(
       margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
@@ -377,17 +432,18 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Main Status Header
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(statusIcon, color: statusColor, size: 32),
+                child: Icon(statusIcon, color: statusColor, size: 28),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -395,16 +451,16 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
                     Text(
                       statusText,
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: statusColor,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       _getConfidenceLabel(),
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
                         color: statusColor,
                       ),
@@ -414,9 +470,9 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: statusColor.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(8),
@@ -424,94 +480,267 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
             child: Text(
               statusDescription,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 13,
                 color: Theme.of(context).textTheme.bodyMedium?.color,
-                height: 1.5,
+                height: 1.4,
               ),
             ),
           ),
-          if (_scanResult!.detectedThreats.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Text(
-              l.t('email_detail_detected_threats'),
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
+
+          // Safety Check Section (Inline)
+          const SizedBox(height: 16),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(Icons.security, color: Colors.blue.shade700, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                locale == 'vi' ? 'Kiểm tra An toàn' : 'Safety Check',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _scanResult!.detectedThreats.map((threat) => 
-                GestureDetector(
-                  onTap: () => _showThreatDetail(threat),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFFEA4335).withOpacity(0.16)
-                          : const Color(0xFFEA4335).withOpacity(0.06),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: const Color(0xFFEA4335).withOpacity(isDark ? 0.6 : 0.35),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.bug_report, size: 14, color: Color(0xFFEA4335)),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            threat,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark ? Colors.white : const Color(0xFFB31412),
-                              fontWeight: FontWeight.w500,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.touch_app,
-                          size: 12,
-                          color: const Color(0xFFEA4335).withOpacity(0.7),
-                        ),
-                      ],
-                    ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: safetyChecks['passedCount'] == 5
+                      ? Colors.green
+                      : safetyChecks['passedCount'] >= 3
+                      ? Colors.orange
+                      : Colors.red,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${safetyChecks['passedCount']}/5',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
                   ),
                 ),
-              ).toList(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Safety Criteria (Compact List)
+          _buildSafetyCriterion(
+            locale == 'vi' ? 'Bảo vệ PII' : 'PII Protection',
+            safetyChecks['piiProtection'] as bool,
+          ),
+          _buildSafetyCriterion(
+            locale == 'vi' ? 'Chống Lừa đảo' : 'Anti-Phishing',
+            safetyChecks['antiPhishing'] as bool,
+          ),
+          _buildSafetyCriterion(
+            locale == 'vi' ? 'Độ chính xác' : 'Accuracy',
+            safetyChecks['informationAccuracy'] as bool,
+          ),
+          _buildSafetyCriterion(
+            locale == 'vi' ? 'Văn phong' : 'Tone',
+            safetyChecks['professionalTone'] as bool,
+          ),
+          _buildSafetyCriterion(
+            locale == 'vi' ? 'Tuân thủ' : 'Compliance',
+            safetyChecks['compliance'] as bool,
+          ),
+
+          // Feedback Section (Inline)
+          const SizedBox(height: 16),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(
+                Icons.feedback_outlined,
+                color: Colors.blue.shade700,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                l.t('feedback_section_title'),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Compact Feedback Input
+          TextField(
+            controller: _feedbackController,
+            maxLines: 2,
+            decoration: InputDecoration(
+              hintText: l.t('feedback_input_hint'),
+              hintStyle: TextStyle(
+                fontSize: 12,
+                color: theme.brightness == Brightness.dark
+                    ? Colors.grey.shade400
+                    : Colors.grey.shade600,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: theme.brightness == Brightness.dark
+                      ? Colors.grey.shade700
+                      : Colors.grey.shade300,
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: theme.brightness == Brightness.dark
+                      ? Colors.grey.shade700
+                      : Colors.grey.shade300,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.blue.shade600, width: 2),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 8,
+              ),
+              filled: true,
+              fillColor: theme.brightness == Brightness.dark
+                  ? Colors.grey.shade900
+                  : Colors.grey.shade50,
             ),
-          ],
-          // Hiển thị kết quả Gemini AI nếu có
+            style: TextStyle(
+              fontSize: 13,
+              color: theme.textTheme.bodyMedium?.color,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _isAnalyzing ? null : _analyzeEmail,
+                  icon: _isAnalyzing
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.orange,
+                            ),
+                          ),
+                        )
+                      : const Icon(Icons.refresh, size: 16),
+                  label: Text(
+                    _isAnalyzing
+                        ? (locale == 'vi'
+                              ? 'Đang phân tích...'
+                              : 'Analyzing...')
+                        : l.t('feedback_reanalyze_button'),
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    side: BorderSide(color: Colors.orange.shade600),
+                    foregroundColor: Colors.orange.shade600,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final feedback = _feedbackController.text.trim();
+                    if (feedback.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(l.t('feedback_empty_message')),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                      return;
+                    }
+
+                    await _feedbackService.saveFeedback(
+                      emailId: widget.email.id,
+                      feedback: feedback,
+                      analysisResult: _scanResult?.result ?? 'unknown',
+                    );
+
+                    _feedbackController.clear();
+
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(l.t('feedback_submitted')),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.send, size: 16),
+                  label: Text(
+                    l.t('feedback_submit_button'),
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue.shade700,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // Gemini AI Results
           if (_scanResult!.analysisDetails['usedGeminiAI'] == true) ...[
             const SizedBox(height: 16),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
             _buildGeminiResults(),
           ],
+
+          // Timestamp
           const SizedBox(height: 12),
           Text(
             l
                 .t('email_detail_analyzed_at')
                 .replaceFirst(
-                    '{time}',
-                    DateFormat('dd/MM/yyyy HH:mm')
-                        .format(_scanResult!.scanDate)),
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
+                  '{time}',
+                  DateFormat('dd/MM/yyyy HH:mm').format(_scanResult!.scanDate),
+                ),
+            style: TextStyle(fontSize: 11, color: Colors.grey[600]),
           ),
         ],
       ),
     );
   }
 
+  Widget _buildSafetyCriterion(String title, bool passed) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Icon(
+            passed ? Icons.check_circle : Icons.cancel,
+            color: passed ? Colors.green : Colors.red,
+            size: 16,
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: Text(title, style: const TextStyle(fontSize: 13))),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEmailContent() {
-    final bodyText = _decodeHtmlEntities(widget.email.body ?? widget.email.snippet);
+    final bodyText = _decodeHtmlEntities(
+      widget.email.body ?? widget.email.snippet,
+    );
     final l = AppLocalizations.of(context);
 
     return Container(
@@ -533,16 +762,12 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
         children: [
           Text(
             l.t('email_detail_info_title'),
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const Divider(height: 24),
           _buildSenderRow(),
           const SizedBox(height: 12),
-          _buildInfoRow(
-              l.t('email_detail_info_subject'), widget.email.subject),
+          _buildInfoRow(l.t('email_detail_info_subject'), widget.email.subject),
           const SizedBox(height: 12),
           _buildInfoRow(
             l.t('email_detail_info_date'),
@@ -589,18 +814,14 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
         .replaceAll('&quot;', '"')
         .replaceAll('&#39;', "'");
 
-    // Numeric entities: &#NNN;
-    result = result.replaceAllMapped(
-      RegExp(r'&#(\d+);'),
-      (m) {
-        try {
-          final code = int.parse(m.group(1)!);
-          return String.fromCharCode(code);
-        } catch (_) {
-          return m.group(0)!;
-        }
-      },
-    );
+    result = result.replaceAllMapped(RegExp(r'&#(\d+);'), (m) {
+      try {
+        final code = int.parse(m.group(1)!);
+        return String.fromCharCode(code);
+      } catch (_) {
+        return m.group(0)!;
+      }
+    });
 
     return result;
   }
@@ -668,10 +889,7 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
               const SizedBox(height: 4),
               Text(
                 DateFormat('dd/MM/yyyy HH:mm').format(widget.email.date),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
             ],
           ),
@@ -681,7 +899,8 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
   }
 
   Widget _buildGeminiResults() {
-    final geminiData = _scanResult!.analysisDetails['gemini'] as Map<String, dynamic>?;
+    final geminiData =
+        _scanResult!.analysisDetails['gemini'] as Map<String, dynamic>?;
     if (geminiData == null) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
@@ -690,34 +909,32 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
     final bodyColor = theme.textTheme.bodyMedium?.color;
 
     final reasons = geminiData['reasons'] as List<dynamic>? ?? [];
-    final recommendations = geminiData['recommendations'] as List<dynamic>? ?? [];
-    final detailedAnalysis = geminiData['detailedAnalysis'] as Map<String, dynamic>? ?? {};
+    final recommendations =
+        geminiData['recommendations'] as List<dynamic>? ?? [];
+    final detailedAnalysis =
+        geminiData['detailedAnalysis'] as Map<String, dynamic>? ?? {};
     final l = AppLocalizations.of(context);
-    
-    // Lấy risk score và xác định màu sắc
+
     final riskScore = geminiData['riskScore']?.toInt() ?? 0;
     Color scoreColor;
     Color scoreBgColor;
-    
+
     if (riskScore >= 70) {
-      // Nguy hiểm (70-100)
       scoreColor = Colors.white;
-      scoreBgColor = const Color(0xFFEA4335); // Đỏ
+      scoreBgColor = const Color(0xFFEA4335);
     } else if (riskScore >= 40) {
-      // Nghi ngờ (40-69)
       scoreColor = Colors.black87;
-      scoreBgColor = const Color(0xFFFBBC04); // Vàng
+      scoreBgColor = const Color(0xFFFBBC04);
     } else {
-      // An toàn (0-39)
       scoreColor = Colors.white;
-      scoreBgColor = const Color(0xFF34A853); // Xanh
+      scoreBgColor = const Color(0xFF34A853);
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             gradient: isDark
                 ? null
@@ -737,19 +954,19 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
               Icon(
                 Icons.auto_awesome,
                 color: isDark ? theme.colorScheme.primary : Colors.purple[700],
-                size: 20,
+                size: 18,
               ),
               const SizedBox(width: 8),
               Text(
                 l.t('gemini_analysis_title'),
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 14,
+                  fontSize: 13,
                 ),
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: scoreBgColor,
                   borderRadius: BorderRadius.circular(12),
@@ -759,119 +976,121 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
                   style: TextStyle(
                     color: scoreColor,
                     fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                    fontSize: 11,
                   ),
                 ),
               ),
             ],
           ),
         ),
-        
+
         if (reasons.isNotEmpty) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Text(
             l.t('gemini_analysis_reasons_title'),
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
-          ...reasons.map((reason) => Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  margin: const EdgeInsets.only(top: 6, right: 8),
-                  width: 5,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: Colors.purple[700],
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    reason.toString(),
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: bodyColor?.withOpacity(0.8),
+          ...reasons.map(
+            (reason) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 6, right: 8),
+                    width: 4,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.purple[700],
+                      shape: BoxShape.circle,
                     ),
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: Text(
+                      reason.toString(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: bodyColor?.withOpacity(0.8),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          )),
+          ),
         ],
 
         if (recommendations.isNotEmpty) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Text(
             l.t('gemini_analysis_recommendations_title'),
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
-          ...recommendations.map((rec) => Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: isDark ? surface : Colors.blue[50],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: isDark
-                    ? theme.colorScheme.primary.withOpacity(0.5)
-                    : Colors.blue[200]!,
+          ...recommendations.map(
+            (rec) => Container(
+              margin: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isDark ? surface : Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isDark
+                      ? theme.colorScheme.primary.withOpacity(0.5)
+                      : Colors.blue[200]!,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.tips_and_updates,
+                    size: 14,
+                    color: isDark
+                        ? theme.colorScheme.primary
+                        : Colors.blue[700],
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      rec.toString(),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.tips_and_updates,
-                  size: 16,
-                  color: isDark ? theme.colorScheme.primary : Colors.blue[700],
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    rec.toString(),
-                    style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodyMedium?.color),
-                  ),
-                ),
-              ],
-            ),
-          )),
+          ),
         ],
 
         if (detailedAnalysis.isNotEmpty) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           ExpansionTile(
             tilePadding: EdgeInsets.zero,
             title: Text(
               l.t('gemini_analysis_details_title'),
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
             ),
             children: [
-              ...detailedAnalysis.entries.map((entry) => 
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
+              ...detailedAnalysis.entries.map(
+                (entry) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       SizedBox(
-                        width: 100,
+                        width: 90,
                         child: Text(
                           '${entry.key}:',
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Theme.of(context).textTheme.bodyMedium?.color,
+                            color: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.color,
                           ),
                         ),
                       ),
@@ -879,8 +1098,10 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
                         child: Text(
                           entry.value.toString(),
                           style: TextStyle(
-                            fontSize: 13,
-                            color: Theme.of(context).textTheme.bodyMedium?.color,
+                            fontSize: 12,
+                            color: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.color,
                           ),
                         ),
                       ),
@@ -895,65 +1116,20 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
     );
   }
 
-  void _showThreatDetail(String threat) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        final l = AppLocalizations.of(context);
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Row(
-            children: [
-              Icon(Icons.bug_report, color: Colors.red[700], size: 24),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  l.t('email_detail_threat_detail_title'),
-                  style: const TextStyle(fontSize: 18),
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Text(
-              threat,
-              style: TextStyle(
-                fontSize: 14,
-                color: Theme.of(context).textTheme.bodyMedium?.color,
-                height: 1.5,
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(l.t('email_detail_threat_detail_close')),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   String _getConfidenceLabel() {
     final confidencePercent = (_scanResult!.confidenceScore * 100).toInt();
     final l = AppLocalizations.of(context);
     final percentStr = confidencePercent.toString();
-    
+
     if (_scanResult!.isPhishing) {
-      // Email nguy hiểm → hiển thị "Độ nguy hiểm"
       return l
           .t('email_detail_confidence_phishing')
           .replaceFirst('{percent}', percentStr);
     } else if (_scanResult!.isSuspicious) {
-      // Email nghi ngờ → hiển thị "Mức độ nghi ngờ"
       return l
           .t('email_detail_confidence_suspicious')
           .replaceFirst('{percent}', percentStr);
     } else {
-      // Email an toàn → hiển thị "Độ an toàn"
       return l
           .t('email_detail_confidence_safe')
           .replaceFirst('{percent}', percentStr);
