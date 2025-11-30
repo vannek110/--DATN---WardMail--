@@ -5,10 +5,7 @@ class AppLocalizations {
 
   final Locale locale;
 
-  static const supportedLocales = [
-    Locale('en'),
-    Locale('vi'),
-  ];
+  static const supportedLocales = [Locale('en'), Locale('vi')];
 
   static const _localizedValues = <String, Map<String, String>>{
     'en': {
@@ -98,8 +95,7 @@ class AppLocalizations {
       'statistics_clear_history_message':
           'Are you sure you want to clear all history?',
       'statistics_empty_title': 'No data yet',
-      'statistics_empty_subtitle':
-          'Scan some emails to see statistics',
+      'statistics_empty_subtitle': 'Scan some emails to see statistics',
       'statistics_overview_title': 'Overview',
       'statistics_total_label': 'Total',
       'statistics_distribution_title': 'Result distribution',
@@ -132,10 +128,8 @@ class AppLocalizations {
       'reports_common_threats_title': 'Common threats',
       'reports_common_threats_empty': 'No threats have been detected',
       'reports_security_recommendations_title': 'Security recommendations',
-      'reports_analysis_dangerous_desc':
-          'Detected clear phishing indicators',
-      'reports_analysis_suspicious_desc':
-          'Needs to be reviewed more carefully',
+      'reports_analysis_dangerous_desc': 'Detected clear phishing indicators',
+      'reports_analysis_suspicious_desc': 'Needs to be reviewed more carefully',
       'reports_recommendation_1_title': 'Do not click on strange links',
       'reports_recommendation_1_desc':
           'Always check the URL before clicking any link in an email.',
@@ -195,7 +189,8 @@ class AppLocalizations {
       'notif_safe_body': 'Email from {from} has been checked and is safe',
 
       // Home screen / settings extras
-      'auto_analysis_enabled_snackbar': 'Auto-analyze new emails has been enabled',
+      'auto_analysis_enabled_snackbar':
+          'Auto-analyze new emails has been enabled',
       'auto_analysis_disabled_snackbar':
           'Auto-analyze new emails has been disabled',
       'biometric_auth_failed': 'Authentication failed',
@@ -265,12 +260,10 @@ class AppLocalizations {
       'password_strength_strong': 'Strong password',
       'forgot_password_enter_email':
           'Please enter your email to reset the password',
-      'forgot_password_email_sent':
-          'Password reset email has been sent!',
+      'forgot_password_email_sent': 'Password reset email has been sent!',
       // Email verification
       'email_verification_title': 'Verify email',
-      'email_verification_sent_to':
-          'We have sent a verification email to:',
+      'email_verification_sent_to': 'We have sent a verification email to:',
       'email_verification_check_email_title': 'Please check your email',
       'email_verification_check_email_desc':
           'Click the link in the email to verify your account. Check the spam folder if you do not see it.',
@@ -308,14 +301,12 @@ class AppLocalizations {
           'Ask AI about Gmail usage, security, spam/phishing...',
       'gmail_ai_chat_error': 'Could not connect to AI: {error}',
       'gmail_ai_suggestions_title': 'Suggestions for asking AI about Gmail',
-      'gmail_ai_suggestion_1':
-          'How can I recognize phishing emails in Gmail?',
+      'gmail_ai_suggestion_1': 'How can I recognize phishing emails in Gmail?',
       'gmail_ai_suggestion_2':
           'What should I do when I receive a suspicious email?',
       'gmail_ai_suggestion_3':
           'Guide to protect my Gmail account from being hacked.',
-      'gmail_ai_suggestion_4':
-          'Explain how to report spam/phishing in Gmail.',
+      'gmail_ai_suggestion_4': 'Explain how to report spam/phishing in Gmail.',
 
       // Email AI chat (per email)
       'email_ai_suggestion_1': 'Is this email trustworthy?',
@@ -352,22 +343,18 @@ class AppLocalizations {
       'email_list_delete_confirm_title': 'Move to Trash?',
       'email_list_delete_confirm_message':
           'The email will be moved to the Trash in Gmail.',
-      'email_list_snackbar_moved_to_trash':
-          'Email has been moved to Trash',
-      'email_list_snackbar_delete_error':
-          'Failed to delete email: {error}',
+      'email_list_snackbar_moved_to_trash': 'Email has been moved to Trash',
+      'email_list_snackbar_delete_error': 'Failed to delete email: {error}',
       'email_list_snackbar_no_selected_restore':
           'No emails selected to restore',
       'email_list_snackbar_restore_google_only':
           'Restoring from Trash is only supported for Google accounts',
       'email_list_snackbar_restored':
           'Selected emails have been restored to Inbox',
-      'email_list_snackbar_no_selected_delete':
-          'No emails selected to delete',
+      'email_list_snackbar_no_selected_delete': 'No emails selected to delete',
       'email_list_snackbar_delete_google_only':
           'Bulk delete is only supported for Google accounts',
-      'email_list_snackbar_deleted':
-          'Selected emails have been moved to Trash',
+      'email_list_snackbar_deleted': 'Selected emails have been moved to Trash',
       'email_list_preview_open_detail': 'Open details',
       'email_list_restore_selected': 'Restore selected emails',
       'email_list_exit_selection': 'Exit selection mode',
@@ -398,6 +385,17 @@ class AppLocalizations {
 
       // Monitoring
       'monitoring_start_error': 'Failed to start monitoring: {error}',
+
+      // Feedback
+      'feedback_section_title': 'Your Feedback',
+      'feedback_input_hint': 'Share your thoughts about this analysis...',
+      'feedback_reanalyze_button': 'Re-analyze',
+      'feedback_submit_button': 'Send Feedback',
+      'feedback_submitted': 'Feedback submitted. Thank you!',
+      'feedback_reanalyzing': 'Re-analyzing email...',
+      'feedback_history_title': 'Previous Feedback',
+      'feedback_you': 'You',
+      'feedback_empty_message': 'Please enter your feedback',
     },
     'vi': {
       'app_title': 'WardMail',
@@ -410,8 +408,7 @@ class AppLocalizations {
 
       // Auth / login
       'login_title': 'Đăng nhập',
-      'login_subtitle':
-          'WardMail bảo vệ Gmail khỏi email lừa đảo và phishing',
+      'login_subtitle': 'WardMail bảo vệ Gmail khỏi email lừa đảo và phishing',
       'login_with': 'Đăng nhập bằng',
       'login_email': 'Đăng nhập bằng Email',
       'login_no_account': 'Bạn chưa có tài khoản? ',
@@ -434,8 +431,7 @@ class AppLocalizations {
 
       // Biometric
       'biometric_title': 'Xác thực bảo mật',
-      'biometric_subtitle':
-          'Sử dụng vân tay hoặc PIN\nđể mở khóa ứng dụng',
+      'biometric_subtitle': 'Sử dụng vân tay hoặc PIN\nđể mở khóa ứng dụng',
       'biometric_button': 'Xác thực',
 
       // Home / navigation
@@ -521,10 +517,8 @@ class AppLocalizations {
       'reports_common_threats_title': 'Mối đe dọa phổ biến',
       'reports_common_threats_empty': 'Không có mối đe dọa nào được phát hiện',
       'reports_security_recommendations_title': 'Khuyến nghị bảo mật',
-      'reports_analysis_dangerous_desc':
-          'Phát hiện dấu hiệu phishing rõ ràng',
-      'reports_analysis_suspicious_desc':
-          'Cần xem xét kỹ hơn',
+      'reports_analysis_dangerous_desc': 'Phát hiện dấu hiệu phishing rõ ràng',
+      'reports_analysis_suspicious_desc': 'Cần xem xét kỹ hơn',
       'reports_recommendation_1_title': 'Không nhấp vào link lạ',
       'reports_recommendation_1_desc':
           'Luôn kiểm tra URL trước khi nhấp vào bất kỳ liên kết nào trong email',
@@ -579,17 +573,13 @@ class AppLocalizations {
       'notif_phishing_title': '🚨 Phát hiện email phishing!',
       'notif_phishing_body': 'Email từ {from} có dấu hiệu lừa đảo',
       'notif_suspicious_title': '⚠️ Email nghi ngờ',
-      'notif_suspicious_body':
-          'Email từ {from} cần xem xét kỹ hơn',
+      'notif_suspicious_body': 'Email từ {from} cần xem xét kỹ hơn',
       'notif_safe_title': '✅ Email an toàn',
-      'notif_safe_body':
-          'Email từ {from} đã được kiểm tra và an toàn',
+      'notif_safe_body': 'Email từ {from} đã được kiểm tra và an toàn',
 
       // Home screen / settings extras
-      'auto_analysis_enabled_snackbar':
-          'Đã bật tự động phân tích email mới',
-      'auto_analysis_disabled_snackbar':
-          'Đã tắt tự động phân tích email mới',
+      'auto_analysis_enabled_snackbar': 'Đã bật tự động phân tích email mới',
+      'auto_analysis_disabled_snackbar': 'Đã tắt tự động phân tích email mới',
       'biometric_auth_failed': 'Xác thực thất bại',
       'biometric_enabled_snackbar': 'Đã bật xác thực vân tay',
       'biometric_disabled_snackbar': 'Đã tắt xác thực vân tay',
@@ -631,7 +621,8 @@ class AppLocalizations {
           '• Không trả lời email, không cung cấp mật khẩu hoặc mã OTP.\n'
           '• Tránh nhấp vào liên kết hoặc tải xuống tệp lạ.\n'
           '• Báo cáo email như spam/phishing trong Gmail để Google chặn tốt hơn.',
-      'help_section4_title': '4. WardMail có xem nội dung riêng tư của tôi không?',
+      'help_section4_title':
+          '4. WardMail có xem nội dung riêng tư của tôi không?',
       'help_section4_content':
           'WardMail chỉ phân tích nội dung email để phát hiện dấu hiệu lừa đảo. '
           'Dữ liệu được xử lý bảo mật và chỉ phục vụ cho mục đích bảo vệ bạn.',
@@ -650,36 +641,30 @@ class AppLocalizations {
       'validation_enter_name': 'Vui lòng nhập họ tên',
       'validation_enter_password_confirm': 'Vui lòng xác nhận mật khẩu',
       'validation_password_mismatch': 'Mật khẩu không khớp',
-      'validation_password_min_length':
-          'Mật khẩu phải có ít nhất 8 ký tự',
+      'validation_password_min_length': 'Mật khẩu phải có ít nhất 8 ký tự',
       'validation_password_requirements':
           'Mật khẩu phải có chữ hoa, chữ thường, số và ký tự đặc biệt',
       'password_strength_weak': 'Mật khẩu yếu',
       'password_strength_medium': 'Mật khẩu trung bình',
       'password_strength_strong': 'Mật khẩu mạnh',
-      'forgot_password_enter_email':
-          'Vui lòng nhập email để đặt lại mật khẩu',
-      'forgot_password_email_sent':
-          'Email đặt lại mật khẩu đã được gửi!',
+      'forgot_password_enter_email': 'Vui lòng nhập email để đặt lại mật khẩu',
+      'forgot_password_email_sent': 'Email đặt lại mật khẩu đã được gửi!',
       // Email verification
       'email_verification_title': 'Xác thực Email',
-      'email_verification_sent_to':
-          'Chúng tôi đã gửi email xác thực đến:',
+      'email_verification_sent_to': 'Chúng tôi đã gửi email xác thực đến:',
       'email_verification_check_email_title': 'Vui lòng kiểm tra email',
       'email_verification_check_email_desc':
           'Nhấp vào link trong email để xác thực tài khoản. Kiểm tra cả thư mục spam nếu không thấy.',
       'email_verification_waiting': 'Đang chờ xác thực...',
       'email_verification_not_received': 'Không nhận được email?',
       'email_verification_resend': 'Gửi lại email',
-      'email_verification_resend_after_seconds':
-          'Gửi lại sau {seconds} giây',
+      'email_verification_resend_after_seconds': 'Gửi lại sau {seconds} giây',
       'error_generic': 'Đã xảy ra lỗi',
       'error_user_not_found': 'Không tìm thấy tài khoản',
       'error_wrong_password': 'Mật khẩu không đúng',
       'error_invalid_email': 'Email không hợp lệ',
       'error_user_disabled': 'Tài khoản đã bị vô hiệu hóa',
-      'error_email_already_in_use':
-          'Email này đã được đăng ký',
+      'error_email_already_in_use': 'Email này đã được đăng ký',
       'error_weak_password': 'Mật khẩu quá yếu',
       'error_with_message': 'Lỗi: {message}',
 
@@ -706,7 +691,8 @@ class AppLocalizations {
       'gmail_ai_suggestion_1': 'Làm sao nhận diện email lừa đảo trong Gmail?',
       'gmail_ai_suggestion_2': 'Khi nhận email đáng ngờ tôi nên làm gì?',
       'gmail_ai_suggestion_3': 'Hướng dẫn bảo vệ tài khoản Gmail khỏi bị hack.',
-      'gmail_ai_suggestion_4': 'Giải thích cách báo cáo spam/phishing trong Gmail.',
+      'gmail_ai_suggestion_4':
+          'Giải thích cách báo cáo spam/phishing trong Gmail.',
 
       // Email AI chat (per email)
       'email_ai_suggestion_1': 'Email này có đáng tin không?',
@@ -743,21 +729,17 @@ class AppLocalizations {
       'email_list_delete_confirm_title': 'Chuyển vào Thùng rác?',
       'email_list_delete_confirm_message':
           'Email sẽ được chuyển vào Thùng rác trong Gmail.',
-      'email_list_snackbar_moved_to_trash':
-          'Đã chuyển email vào Thùng rác',
+      'email_list_snackbar_moved_to_trash': 'Đã chuyển email vào Thùng rác',
       'email_list_snackbar_delete_error': 'Lỗi xóa email: {error}',
       'email_list_snackbar_no_selected_restore':
           'Chưa chọn email nào để khôi phục',
       'email_list_snackbar_restore_google_only':
           'Khôi phục Thùng rác hiện chỉ hỗ trợ tài khoản Google',
-      'email_list_snackbar_restored':
-          'Đã khôi phục email về Hộp thư đến',
-      'email_list_snackbar_no_selected_delete':
-          'Chưa chọn email nào để xóa',
+      'email_list_snackbar_restored': 'Đã khôi phục email về Hộp thư đến',
+      'email_list_snackbar_no_selected_delete': 'Chưa chọn email nào để xóa',
       'email_list_snackbar_delete_google_only':
           'Xóa nhiều email chỉ hỗ trợ tài khoản Google',
-      'email_list_snackbar_deleted':
-          'Đã chuyển email vào Thùng rác',
+      'email_list_snackbar_deleted': 'Đã chuyển email vào Thùng rác',
       'email_list_preview_open_detail': 'Mở chi tiết',
       'email_list_restore_selected': 'Khôi phục email đã chọn',
       'email_list_exit_selection': 'Thoát chế độ chọn',
@@ -788,6 +770,17 @@ class AppLocalizations {
 
       // Monitoring
       'monitoring_start_error': 'Lỗi khởi động monitoring: {error}',
+
+      // Feedback
+      'feedback_section_title': 'Phản hồi của bạn',
+      'feedback_input_hint': 'Chia sẻ ý kiến về kết quả phân tích...',
+      'feedback_reanalyze_button': 'Phân tích lại',
+      'feedback_submit_button': 'Gửi phản hồi',
+      'feedback_submitted': 'Đã gửi phản hồi. Cảm ơn bạn!',
+      'feedback_reanalyzing': 'Đang phân tích lại email...',
+      'feedback_history_title': 'Phản hồi trước đó',
+      'feedback_you': 'Bạn',
+      'feedback_empty_message': 'Vui lòng nhập phản hồi',
     },
   };
 
@@ -810,9 +803,9 @@ class _AppLocalizationsDelegate
   const _AppLocalizationsDelegate();
 
   @override
-  bool isSupported(Locale locale) =>
-      AppLocalizations.supportedLocales
-          .any((l) => l.languageCode == locale.languageCode);
+  bool isSupported(Locale locale) => AppLocalizations.supportedLocales.any(
+    (l) => l.languageCode == locale.languageCode,
+  );
 
   @override
   Future<AppLocalizations> load(Locale locale) async {

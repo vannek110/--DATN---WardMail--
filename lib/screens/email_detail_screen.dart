@@ -6,6 +6,7 @@ import '../services/email_analysis_service.dart';
 import '../services/scan_history_service.dart';
 import '../services/notification_service.dart';
 import '../localization/app_localizations.dart';
+import '../widgets/email_feedback_widget.dart';
 import 'email_ai_chat_screen.dart';
 import 'compose_email_screen.dart';
 
@@ -239,7 +240,13 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            if (_scanResult != null) _buildAnalysisResult(),
+            if (_scanResult != null) ...[
+              _buildAnalysisResult(),
+              EmailFeedbackWidget(
+                emailId: widget.email.id,
+                onReanalyze: _analyzeEmail,
+              ),
+            ],
             _buildEmailContent(),
             const SizedBox(height: 80),
           ],
