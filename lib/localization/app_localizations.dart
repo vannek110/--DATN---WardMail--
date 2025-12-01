@@ -294,7 +294,7 @@ class AppLocalizations {
       'user_default_display_name': 'User',
 
       // Gmail AI chat & suggestions
-      'gmail_ai_chat_title': 'Gmail AI chat',
+      'gmail_ai_chat_title': 'WardMail AI',
       'gmail_ai_chat_intro':
           'This chatbot helps you ask general questions about Gmail: usage, inbox management, account security and how to recognize spam/phishing emails. To analyze a specific email, use AI in the email detail screen.',
       'gmail_ai_chat_input_hint':

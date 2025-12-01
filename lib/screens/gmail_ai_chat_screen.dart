@@ -61,9 +61,9 @@ class _GmailAiChatScreenState extends State<GmailAiChatScreen> {
       setState(() {
         _messages.add(
           _ChatMessage(
-            text: AppLocalizations.of(context)
-                .t('gmail_ai_chat_error')
-                .replaceFirst('{error}', e.toString()),
+            text: AppLocalizations.of(
+              context,
+            ).t('gmail_ai_chat_error').replaceFirst('{error}', e.toString()),
             isUser: false,
             isError: true,
           ),
@@ -111,17 +111,29 @@ class _GmailAiChatScreenState extends State<GmailAiChatScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final onSurface = Theme.of(context).textTheme.bodyMedium?.color ?? const Color(0xFF202124);
+    final onSurface =
+        Theme.of(context).textTheme.bodyMedium?.color ??
+        const Color(0xFF202124);
 
     return Scaffold(
       appBar: AppBar(
         surfaceTintColor: Colors.transparent,
-        title: Text(
-          l.t('gmail_ai_chat_title'),
-          style: TextStyle(
-            color: onSurface,
-            fontWeight: FontWeight.w600,
-          ),
+        title: Row(
+          children: [
+            Image.asset(
+              'lib/img/z7237230542816_f58f6ecbbeacba85be0b0eac32b0c70f-removebg-preview.png',
+              height: 32,
+              width: 32,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                l.t('gmail_ai_chat_title'),
+                style: TextStyle(color: onSurface, fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
         iconTheme: const IconThemeData(color: Color(0xFF5F6368)),
         elevation: 0,
@@ -159,51 +171,65 @@ class _GmailAiChatScreenState extends State<GmailAiChatScreen> {
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final msg = _messages[index];
-                return Align(
-                  alignment:
-                      msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: msg.isUser
-                          ? const Color(0xFF4285F4)
-                          : (msg.isError
-                              ? Colors.red[50]
-                              : Theme.of(context).colorScheme.surface),
-                      borderRadius: BorderRadius.circular(12).copyWith(
-                        bottomLeft: msg.isUser
-                            ? const Radius.circular(12)
-                            : Radius.zero,
-                        bottomRight: msg.isUser
-                            ? Radius.zero
-                            : const Radius.circular(12),
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    mainAxisAlignment: msg.isUser
+                        ? MainAxisAlignment.end
+                        : MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (!msg.isUser) ...[
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundColor: Colors.transparent,
+                          backgroundImage: const AssetImage(
+                            'lib/img/z7237230542816_f58f6ecbbeacba85be0b0eac32b0c70f-removebg-preview.png',
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width * 0.75,
+                        ),
+                        decoration: BoxDecoration(
+                          color: msg.isUser
+                              ? const Color(0xFF4285F4)
+                              : (msg.isError
+                                    ? Colors.red[50]
+                                    : Theme.of(context).colorScheme.surface),
+                          borderRadius: BorderRadius.circular(12).copyWith(
+                            bottomLeft: msg.isUser
+                                ? const Radius.circular(12)
+                                : Radius.zero,
+                            bottomRight: msg.isUser
+                                ? Radius.zero
+                                : const Radius.circular(12),
+                          ),
+                          border: msg.isUser
+                              ? null
+                              : Border.all(
+                                  color: msg.isError
+                                      ? Colors.red[200]!
+                                      : Colors.grey[300]!,
+                                ),
+                        ),
+                        child: Text(
+                          msg.text,
+                          style: TextStyle(
+                            color: msg.isUser
+                                ? Colors.white
+                                : (msg.isError ? Colors.red[900] : onSurface),
+                            fontSize: 14,
+                          ),
+                        ),
                       ),
-                      border: msg.isUser
-                          ? null
-                          : Border.all(
-                              color: msg.isError
-                                  ? Colors.red[200]!
-                                  : Colors.grey[300]!,
-                            ),
-                    ),
-                    child: Text(
-                      msg.text,
-                      style: TextStyle(
-                        color: msg.isUser
-                            ? Colors.white
-                            : (msg.isError
-                                ? Colors.red[900]
-                                : onSurface),
-                        fontSize: 14,
-                      ),
-                    ),
+                    ],
                   ),
                 );
               },

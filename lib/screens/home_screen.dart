@@ -377,6 +377,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 16),
                 ],
+                // Theme selection
+                // Theme selection
                 Container(
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
@@ -389,37 +391,28 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ListTile(
-                        leading: const Icon(
-                          Icons.brightness_6_rounded,
-                          color: Color(0xFF5F6368),
-                        ),
-                        title: Text(
-                          l.t('settings_theme_title'),
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: Text(
-                          l.t('settings_theme_subtitle'),
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                      ),
-                      const Divider(height: 1),
-                      _ThemeModeTile(
-                        mode: ThemeMode.system,
-                        labelKey: 'settings_theme_system',
-                      ),
-                      _ThemeModeTile(
-                        mode: ThemeMode.light,
-                        labelKey: 'settings_theme_light',
-                      ),
-                      _ThemeModeTile(
-                        mode: ThemeMode.dark,
-                        labelKey: 'settings_theme_dark',
-                      ),
-                    ],
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.brightness_6_rounded,
+                      color: Color(0xFF5F6368),
+                    ),
+                    title: Text(
+                      l.t('settings_theme_title'),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      l.t('settings_theme_subtitle'),
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 16,
+                      color: Colors.grey,
+                    ),
+                    onTap: () {
+                      Navigator.pop(context); // Close bottom sheet first
+                      _showThemeDialog();
+                    },
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -436,29 +429,24 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ListTile(
-                        leading: const Icon(
-                          Icons.language,
-                          color: Color(0xFF5F6368),
-                        ),
-                        title: Text(
-                          l.t('settings_language_title'),
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                      const Divider(height: 1),
-                      _LanguageTile(
-                        locale: const Locale('vi'),
-                        labelKey: 'settings_language_vi',
-                      ),
-                      _LanguageTile(
-                        locale: const Locale('en'),
-                        labelKey: 'settings_language_en',
-                      ),
-                    ],
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.language,
+                      color: Color(0xFF5F6368),
+                    ),
+                    title: Text(
+                      l.t('settings_language_title'),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 16,
+                      color: Colors.grey,
+                    ),
+                    onTap: () {
+                      Navigator.pop(context); // Close bottom sheet first
+                      _showLanguageDialog();
+                    },
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -926,6 +914,246 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
+
+  void _showThemeDialog() {
+    final l = AppLocalizations.of(context);
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 20,
+                  horizontal: 20,
+                ),
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF4285F4), Color(0xFF34A853)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.brightness_6_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        l.t('settings_theme_title'),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Content
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 8,
+                ),
+                child: Column(
+                  children: [
+                    _ThemeModeTile(
+                      mode: ThemeMode.system,
+                      labelKey: 'settings_theme_system',
+                      onTap: () => Navigator.pop(context),
+                    ),
+                    const Divider(height: 1, indent: 16, endIndent: 16),
+                    _ThemeModeTile(
+                      mode: ThemeMode.light,
+                      labelKey: 'settings_theme_light',
+                      onTap: () => Navigator.pop(context),
+                    ),
+                    const Divider(height: 1, indent: 16, endIndent: 16),
+                    _ThemeModeTile(
+                      mode: ThemeMode.dark,
+                      labelKey: 'settings_theme_dark',
+                      onTap: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              // Footer
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.grey[600],
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                      ),
+                      child: Text(
+                        l.t('common_close'),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showLanguageDialog() {
+    final l = AppLocalizations.of(context);
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 20,
+                  horizontal: 20,
+                ),
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF4285F4), Color(0xFF34A853)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.language,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        l.t('settings_language_title'),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Content
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 8,
+                ),
+                child: Column(
+                  children: [
+                    _LanguageTile(
+                      locale: const Locale('vi'),
+                      labelKey: 'settings_language_vi',
+                      onTap: () => Navigator.pop(context),
+                    ),
+                    const Divider(height: 1, indent: 16, endIndent: 16),
+                    _LanguageTile(
+                      locale: const Locale('en'),
+                      labelKey: 'settings_language_en',
+                      onTap: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              // Footer
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.grey[600],
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                      ),
+                      child: Text(
+                        l.t('common_close'),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _IntroBullet extends StatelessWidget {
@@ -1037,8 +1265,13 @@ class _HelpSection extends StatelessWidget {
 class _ThemeModeTile extends StatelessWidget {
   final ThemeMode mode;
   final String labelKey;
+  final VoidCallback? onTap;
 
-  const _ThemeModeTile({required this.mode, required this.labelKey});
+  const _ThemeModeTile({
+    required this.mode,
+    required this.labelKey,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1065,8 +1298,9 @@ class _ThemeModeTile extends StatelessWidget {
       onChanged: (value) async {
         if (value == null) return;
         await ThemeService().setThemeMode(value);
+        onTap?.call();
       },
-      dense: true,
+      activeColor: const Color(0xFF4285F4),
       title: Row(
         children: [
           Icon(icon, size: 20, color: const Color(0xFF5F6368)),
@@ -1081,8 +1315,13 @@ class _ThemeModeTile extends StatelessWidget {
 class _LanguageTile extends StatelessWidget {
   final Locale locale;
   final String labelKey;
+  final VoidCallback? onTap;
 
-  const _LanguageTile({required this.locale, required this.labelKey});
+  const _LanguageTile({
+    required this.locale,
+    required this.labelKey,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1095,8 +1334,9 @@ class _LanguageTile extends StatelessWidget {
       onChanged: (value) async {
         if (value == null) return;
         await LocaleService().setLocale(Locale(value));
+        onTap?.call();
       },
-      dense: true,
+      activeColor: const Color(0xFF4285F4),
       title: Text(l.t(labelKey)),
     );
   }
