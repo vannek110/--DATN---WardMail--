@@ -66,9 +66,13 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
       // Lấy feedback từ controller nếu có
       final feedback = _feedbackController.text.trim();
 
+      // Lấy locale hiện tại
+      final locale = Localizations.localeOf(context).languageCode;
+
       final result = await _analysisService.analyzeEmail(
         widget.email,
         userFeedback: feedback.isNotEmpty ? feedback : null,
+        locale: locale, // Pass locale to ensure correct language
       );
 
       await _scanHistoryService.saveScanResult(result);
@@ -151,62 +155,44 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
     }
   }
 
-  // Derive safety checks from scan result to ensure consistency
-  Map<String, dynamic> _deriveSafetyFromScanResult(
-    ScanResult result,
-    String locale,
-  ) {
-    // If email is dangerous/suspicious, some criteria must fail
-    bool piiProtection = true;
-    bool antiPhishing = true;
-    bool informationAccuracy = true;
-    bool professionalTone = true;
-    bool compliance = true;
+  // Extract 9 criteria evaluation from Gemini analysis result
+  Map<String, dynamic> _extractCriteriaFromScanResult(ScanResult result) {
+    // Default: all criteria pass (for safe emails or if no Gemini data)
+    Map<String, bool> criteria = {
+      'sender_authenticity': true,
+      'personalization_level': true,
+      'urgency_and_threat': true,
+      'sensitive_data_request': true,
+      'language_quality': true,
+      'link_suspicion': true,
+      'attachment_risk': true,
+      'logical_consistency': true,
+      'technical_header_flags': true,
+    };
 
-    if (result.isPhishing) {
-      // Phishing emails fail anti-phishing and usually tone/accuracy
-      antiPhishing = false;
-      professionalTone = false;
-      informationAccuracy = false;
-    } else if (result.isSuspicious) {
-      // Suspicious emails might fail 1-2 criteria
-      if (result.detectedThreats.isNotEmpty) {
-        // Check threat types to determine which criteria failed
-        final threats = result.detectedThreats
-            .map((t) => t.toLowerCase())
-            .join(' ');
-        if (threats.contains('phish') || threats.contains('lừa')) {
-          antiPhishing = false;
-        }
-        if (threats.contains('spam') || threats.contains('rác')) {
-          professionalTone = false;
-        }
-        if (threats.contains('pii') || threats.contains('nhạy cảm')) {
-          piiProtection = false;
-        }
-      } else {
-        // Default: fail tone for suspicious
-        professionalTone = false;
+    // Extract from Gemini analysis if available
+    if (result.analysisDetails['gemini'] != null) {
+      final geminiData =
+          result.analysisDetails['gemini'] as Map<String, dynamic>;
+
+      // Check if criteriaEvaluation exists in the data
+      if (geminiData['criteriaEvaluation'] != null) {
+        final geminiCriteria =
+            geminiData['criteriaEvaluation'] as Map<String, dynamic>;
+
+        // Update criteria with Gemini's evaluation
+        criteria.forEach((key, defaultValue) {
+          if (geminiCriteria.containsKey(key)) {
+            criteria[key] = geminiCriteria[key] as bool;
+          }
+        });
       }
     }
-    // If safe, all pass (default values)
 
-    int passedCount = [
-      piiProtection,
-      antiPhishing,
-      informationAccuracy,
-      professionalTone,
-      compliance,
-    ].where((p) => p).length;
+    // Count how many criteria passed
+    int passedCount = criteria.values.where((passed) => passed).length;
 
-    return {
-      'piiProtection': piiProtection,
-      'antiPhishing': antiPhishing,
-      'informationAccuracy': informationAccuracy,
-      'professionalTone': professionalTone,
-      'compliance': compliance,
-      'passedCount': passedCount,
-    };
+    return {...criteria, 'passedCount': passedCount};
   }
 
   @override
@@ -425,8 +411,8 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
       statusDescription = l.t('email_detail_status_safe_desc');
     }
 
-    // Get safety checks derived from actual scan result
-    final safetyChecks = _deriveSafetyFromScanResult(_scanResult!, locale);
+    // Get 9 criteria evaluation from Gemini analysis
+    final safetyChecks = _extractCriteriaFromScanResult(_scanResult!);
 
     return Container(
       margin: const EdgeInsets.all(16),
@@ -507,7 +493,13 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              Icon(Icons.security, color: Colors.blue.shade700, size: 20),
+              Icon(
+                Icons.security,
+                color: theme.brightness == Brightness.dark
+                    ? Colors.blue.shade300
+                    : Colors.blue.shade700,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               Text(
                 locale == 'vi' ? 'Kiểm tra An toàn' : 'Safety Check',
@@ -520,15 +512,15 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: safetyChecks['passedCount'] == 5
+                  color: safetyChecks['passedCount'] == 9
                       ? Colors.green
-                      : safetyChecks['passedCount'] >= 3
+                      : safetyChecks['passedCount'] >= 6
                       ? Colors.orange
                       : Colors.red,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${safetyChecks['passedCount']}/5',
+                  '${safetyChecks['passedCount']}/9',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -538,28 +530,96 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
-          // Safety Criteria (Compact List)
+          // Group A: Nguồn Gốc & Danh Tính
+          Text(
+            locale == 'vi'
+                ? 'A. Nguồn Gốc & Danh Tính'
+                : 'A. Source & Identity',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: theme.brightness == Brightness.dark
+                  ? Colors.blue.shade300
+                  : Colors.blue.shade700,
+            ),
+          ),
+          const SizedBox(height: 6),
           _buildSafetyCriterion(
-            locale == 'vi' ? 'Bảo vệ PII' : 'PII Protection',
-            safetyChecks['piiProtection'] as bool,
+            locale == 'vi' ? 'Địa Chỉ & Tên Miền' : 'Address & Domain',
+            safetyChecks['sender_authenticity'] as bool,
+            criterionKey: 'sender_authenticity',
           ),
           _buildSafetyCriterion(
-            locale == 'vi' ? 'Chống Lừa đảo' : 'Anti-Phishing',
-            safetyChecks['antiPhishing'] as bool,
+            locale == 'vi' ? 'Xưng Hô Cá Nhân Hóa' : 'Personalization',
+            safetyChecks['personalization_level'] as bool,
+            criterionKey: 'personalization_level',
+          ),
+          const SizedBox(height: 8),
+
+          // Group B: Nội Dung & Tâm Lý
+          Text(
+            locale == 'vi' ? 'B. Nội Dung & Tâm Lý' : 'B. Content & Psychology',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: theme.brightness == Brightness.dark
+                  ? Colors.blue.shade300
+                  : Colors.blue.shade700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _buildSafetyCriterion(
+            locale == 'vi' ? 'Cảm Xúc & Khẩn Cấp' : 'Urgency & Threat',
+            safetyChecks['urgency_and_threat'] as bool,
+            criterionKey: 'urgency_and_threat',
           ),
           _buildSafetyCriterion(
-            locale == 'vi' ? 'Độ chính xác' : 'Accuracy',
-            safetyChecks['informationAccuracy'] as bool,
+            locale == 'vi'
+                ? 'Yêu Cầu Thông Tin Riêng'
+                : 'Sensitive Data Request',
+            safetyChecks['sensitive_data_request'] as bool,
+            criterionKey: 'sensitive_data_request',
           ),
           _buildSafetyCriterion(
-            locale == 'vi' ? 'Văn phong' : 'Tone',
-            safetyChecks['professionalTone'] as bool,
+            locale == 'vi' ? 'Chất Lượng Ngôn Ngữ' : 'Language Quality',
+            safetyChecks['language_quality'] as bool,
+            criterionKey: 'language_quality',
+          ),
+          const SizedBox(height: 8),
+
+          // Group C: Kỹ Thuật & Liên Kết
+          Text(
+            locale == 'vi' ? 'C. Kỹ Thuật & Liên Kết' : 'C. Technical & Links',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: theme.brightness == Brightness.dark
+                  ? Colors.blue.shade300
+                  : Colors.blue.shade700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _buildSafetyCriterion(
+            locale == 'vi' ? 'Rủi Ro Liên Kết (URL)' : 'Link Risk (URL)',
+            safetyChecks['link_suspicion'] as bool,
+            criterionKey: 'link_suspicion',
           ),
           _buildSafetyCriterion(
-            locale == 'vi' ? 'Tuân thủ' : 'Compliance',
-            safetyChecks['compliance'] as bool,
+            locale == 'vi' ? 'Rủi Ro Tệp Đính Kèm' : 'Attachment Risk',
+            safetyChecks['attachment_risk'] as bool,
+            criterionKey: 'attachment_risk',
+          ),
+          _buildSafetyCriterion(
+            locale == 'vi' ? 'Tính Nhất Quán (Logic)' : 'Logical Consistency',
+            safetyChecks['logical_consistency'] as bool,
+            criterionKey: 'logical_consistency',
+          ),
+          _buildSafetyCriterion(
+            locale == 'vi' ? 'Header Đáng Ngờ' : 'Suspicious Headers',
+            safetyChecks['technical_header_flags'] as bool,
+            criterionKey: 'technical_header_flags',
           ),
 
           // Feedback Section (Inline)
@@ -679,21 +739,29 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
                       return;
                     }
 
+                    // Save feedback to history/server
                     await _feedbackService.saveFeedback(
                       emailId: widget.email.id,
                       feedback: feedback,
                       analysisResult: _scanResult?.result ?? 'unknown',
                     );
 
-                    _feedbackController.clear();
+                    // DO NOT clear controller here, so re-analysis can use it
+                    // _feedbackController.clear();
 
                     if (!mounted) return;
+
+                    // Automatically trigger re-analysis with the feedback
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(l.t('feedback_submitted')),
                         backgroundColor: Colors.green,
+                        duration: const Duration(seconds: 1),
                       ),
                     );
+
+                    // Trigger re-analysis
+                    _analyzeEmail();
                   },
                   icon: const Icon(Icons.send, size: 16),
                   label: Text(
@@ -734,19 +802,375 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
     );
   }
 
-  Widget _buildSafetyCriterion(String title, bool passed) {
+  // Get detailed explanation for each criterion
+  Map<String, dynamic> _getCriterionDetails(
+    String criterionKey,
+    String locale,
+  ) {
+    final details = {
+      'sender_authenticity': {
+        'vi': {
+          'title': 'Địa Chỉ & Tên Miền',
+          'description':
+              'Kiểm tra xem địa chỉ email có khớp với tổ chức được nhắc đến không.',
+          'pass': 'Email đến từ địa chỉ chính thức, tên miền khớp với tổ chức.',
+          'fail':
+              'Phát hiện lỗi chính tả tên miền (typosquatting) hoặc địa chỉ giả mạo.',
+        },
+        'en': {
+          'title': 'Address & Domain',
+          'description':
+              'Checks if the email address matches the claimed organization.',
+          'pass':
+              'Email is from an official address, domain matches the organization.',
+          'fail': 'Detected domain typosquatting or spoofed address.',
+        },
+      },
+      'personalization_level': {
+        'vi': {
+          'title': 'Xưng Hô Cá Nhân Hóa',
+          'description': 'Đánh giá mức độ cá nhân hóa của email.',
+          'pass': 'Email gọi tên bạn hoặc có thông tin cá nhân hóa.',
+          'fail': 'Sử dụng xưng hô chung chung như "Khách hàng", "Bạn".',
+        },
+        'en': {
+          'title': 'Personalization',
+          'description': 'Evaluates the personalization level of the email.',
+          'pass':
+              'Email addresses you by name or includes personalized information.',
+          'fail': 'Uses generic greetings like "Customer", "User".',
+        },
+      },
+      'urgency_and_threat': {
+        'vi': {
+          'title': 'Cảm Xúc & Khẩn Cấp',
+          'description': 'Phát hiện ngôn ngữ tạo áp lực hoặc đe dọa.',
+          'pass': 'Ngôn ngữ bình thường, không gây áp lực.',
+          'fail':
+              'Đe dọa khóa tài khoản, tạo cảm giác khẩn cấp, hoặc hứa hẹn phi lý.',
+        },
+        'en': {
+          'title': 'Urgency & Threat',
+          'description': 'Detects pressure tactics or threatening language.',
+          'pass': 'Normal language, no pressure tactics.',
+          'fail':
+              'Threatens account lock, creates urgency, or makes unrealistic promises.',
+        },
+      },
+      'sensitive_data_request': {
+        'vi': {
+          'title': 'Yêu Cầu Thông Tin Riêng',
+          'description': 'Kiểm tra yêu cầu thông tin nhạy cảm.',
+          'pass': 'Không yêu cầu thông tin nhạy cảm qua email.',
+          'fail': 'Yêu cầu mật khẩu, PIN, OTP, hoặc thông tin cá nhân.',
+        },
+        'en': {
+          'title': 'Sensitive Data Request',
+          'description': 'Checks for requests of sensitive information.',
+          'pass': 'Does not request sensitive information via email.',
+          'fail': 'Requests passwords, PINs, OTPs, or personal information.',
+        },
+      },
+      'language_quality': {
+        'vi': {
+          'title': 'Chất Lượng Ngôn Ngữ',
+          'description': 'Đánh giá chất lượng văn bản và ngữ pháp.',
+          'pass': 'Văn bản chuyên nghiệp, không có lỗi chính tả.',
+          'fail':
+              'Có lỗi chính tả, ngữ pháp, hoặc văn phong không chuyên nghiệp.',
+        },
+        'en': {
+          'title': 'Language Quality',
+          'description': 'Evaluates text quality and grammar.',
+          'pass': 'Professional writing, no spelling errors.',
+          'fail':
+              'Contains spelling, grammar errors, or unprofessional writing.',
+        },
+      },
+      'link_suspicion': {
+        'vi': {
+          'title': 'Rủi Ro Liên Kết (URL)',
+          'description': 'Kiểm tra độ an toàn của các liên kết.',
+          'pass': 'URL hiển thị khớp với đích thực, không có ký tự đáng ngờ.',
+          'fail':
+              'Văn bản hiển thị và URL thực khác nhau, hoặc có ký tự đáng ngờ.',
+        },
+        'en': {
+          'title': 'Link Risk (URL)',
+          'description': 'Checks the safety of links.',
+          'pass': 'Display text matches actual URL, no suspicious characters.',
+          'fail':
+              'Display text and actual URL differ, or contains suspicious characters.',
+        },
+      },
+      'attachment_risk': {
+        'vi': {
+          'title': 'Rủi Ro Tệp Đính Kèm',
+          'description': 'Phát hiện tệp đính kèm nguy hiểm.',
+          'pass': 'Không có tệp đính kèm đáng ngờ.',
+          'fail': 'Có tệp đính kèm không mong muốn hoặc yêu cầu bật Macro.',
+        },
+        'en': {
+          'title': 'Attachment Risk',
+          'description': 'Detects dangerous attachments.',
+          'pass': 'No suspicious attachments.',
+          'fail':
+              'Contains unexpected attachments or requires enabling macros.',
+        },
+      },
+      'logical_consistency': {
+        'vi': {
+          'title': 'Tính Nhất Quán (Logic)',
+          'description': 'Kiểm tra tính logic của nội dung.',
+          'pass': 'Nội dung khớp với hoạt động gần đây của bạn.',
+          'fail':
+              'Nội dung không khớp (VD: thông báo thanh toán cho dịch vụ không dùng).',
+        },
+        'en': {
+          'title': 'Logical Consistency',
+          'description': 'Checks the logic of the content.',
+          'pass': 'Content matches your recent activities.',
+          'fail':
+              'Content doesn\'t match (e.g., payment notice for unused service).',
+        },
+      },
+      'technical_header_flags': {
+        'vi': {
+          'title': 'Header Đáng Ngờ',
+          'description': 'Phân tích kỹ thuật header email.',
+          'pass': 'Header email hợp lệ, không có dấu hiệu giả mạo.',
+          'fail': 'Header bị giả mạo hoặc có dấu hiệu bất thường về kỹ thuật.',
+        },
+        'en': {
+          'title': 'Suspicious Headers',
+          'description': 'Technical analysis of email headers.',
+          'pass': 'Valid email headers, no signs of forgery.',
+          'fail': 'Forged headers or technically suspicious signs.',
+        },
+      },
+    };
+
+    return details[criterionKey]?[locale] ?? {};
+  }
+
+  void _showCriterionDetails(String criterionKey, bool passed, String locale) {
+    final details = _getCriterionDetails(criterionKey, locale);
+    if (details.isEmpty) return;
+
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with icon
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: passed
+                          ? Colors.green.withOpacity(0.1)
+                          : Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      passed ? Icons.check_circle : Icons.cancel,
+                      color: passed ? Colors.green : Colors.red,
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          details['title'] ?? '',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: theme.textTheme.titleLarge?.color,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: passed ? Colors.green : Colors.red,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            passed
+                                ? (locale == 'vi' ? 'Đạt' : 'Passed')
+                                : (locale == 'vi' ? 'Không đạt' : 'Failed'),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Divider(height: 1),
+              const SizedBox(height: 20),
+
+              // Description
+              Text(
+                locale == 'vi' ? 'Mô tả' : 'Description',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.blue.shade300 : Colors.blue.shade700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                details['description'] ?? '',
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.5,
+                  color: theme.textTheme.bodyMedium?.color,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Result explanation
+              Text(
+                locale == 'vi' ? 'Kết quả' : 'Result',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.blue.shade300 : Colors.blue.shade700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: passed
+                      ? Colors.green.withOpacity(0.1)
+                      : Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: passed
+                        ? Colors.green.withOpacity(0.3)
+                        : Colors.red.withOpacity(0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      passed ? Icons.check_circle_outline : Icons.error_outline,
+                      color: passed ? Colors.green : Colors.red,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        passed ? details['pass'] ?? '' : details['fail'] ?? '',
+                        style: TextStyle(
+                          fontSize: 13,
+                          height: 1.4,
+                          color: theme.textTheme.bodyMedium?.color,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Close button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDark
+                        ? Colors.blue.shade700
+                        : Colors.blue.shade600,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    locale == 'vi' ? 'Đóng' : 'Close',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSafetyCriterion(
+    String title,
+    bool passed, {
+    String? criterionKey,
+  }) {
+    final locale = Localizations.localeOf(context).languageCode;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          Icon(
-            passed ? Icons.check_circle : Icons.cancel,
-            color: passed ? Colors.green : Colors.red,
-            size: 16,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: criterionKey != null
+              ? () => _showCriterionDetails(criterionKey, passed, locale)
+              : null,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+            child: Row(
+              children: [
+                Icon(
+                  passed ? Icons.check_circle : Icons.cancel,
+                  color: passed ? Colors.green : Colors.red,
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(title, style: const TextStyle(fontSize: 13)),
+                ),
+                if (criterionKey != null)
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: Colors.grey.shade600,
+                  ),
+              ],
+            ),
           ),
-          const SizedBox(width: 8),
-          Expanded(child: Text(title, style: const TextStyle(fontSize: 13))),
-        ],
+        ),
       ),
     );
   }

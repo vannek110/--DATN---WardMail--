@@ -9,6 +9,7 @@ class EmailAnalysisService {
   Future<ScanResult> analyzeEmail(
     EmailMessage email, {
     String? userFeedback,
+    String? locale, // Add locale parameter
   }) async {
     final threats = <String>[];
     double riskScore = 0.0;
@@ -27,17 +28,19 @@ class EmailAnalysisService {
         print('User Feedback: $userFeedback');
       }
       print('========================================');
-      // Chuẩn bị nội dung email (có giới hạn độ dài để tiết kiệm token)
+      // Chuẩn bị nội dung email (gửi FULL nội dung để phân tích chính xác)
       print('Step 1: Preparing email content...');
-      final truncatedBody = _truncate(email.body ?? email.snippet);
+      final fullBody = email.body ?? email.snippet;
+      print('Email body length: ${fullBody.length} characters');
 
       // Gửi email gốc (không làm mờ) lên Gemini để phân tích chính xác hơn
-      print('Step 2: Sending to Gemini...');
+      print('Step 2: Sending to Gemini with FULL content...');
       geminiResult = await _geminiService.analyzeEmail(
         subject: email.subject,
-        body: truncatedBody,
+        body: fullBody, // ← Gửi toàn bộ nội dung, không truncate
         from: email.from,
         userFeedback: userFeedback,
+        locale: locale, // Pass locale to Gemini
       );
       print('Gemini analysis complete!');
       print('Risk Score: ${geminiResult.riskScore}');
@@ -102,6 +105,7 @@ class EmailAnalysisService {
         'reasons': geminiResult.reasons,
         'recommendations': geminiResult.recommendations,
         'detailedAnalysis': geminiResult.detailedAnalysis,
+        'criteriaEvaluation': geminiResult.criteriaEvaluation,
       };
     }
 
@@ -119,21 +123,16 @@ class EmailAnalysisService {
   }
 
   Future<String> askAiAboutEmail(EmailMessage email, String question) async {
-    final truncatedBody = _truncate(email.body ?? email.snippet);
+    final fullBody = email.body ?? email.snippet;
 
     final answer = await _geminiService.askQuestionAboutEmail(
       subject: email.subject,
-      body: truncatedBody,
+      body: fullBody, // ← Gửi toàn bộ nội dung
       from: email.from,
       question: question,
     );
 
     return answer;
-  }
-
-  String _truncate(String text, {int maxChars = 2000}) {
-    if (text.length <= maxChars) return text;
-    return text.substring(0, maxChars);
   }
 
   String _extractDomain(String email) {

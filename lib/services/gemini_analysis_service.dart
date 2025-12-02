@@ -192,6 +192,7 @@ Nếu thông tin chưa đủ để kết luận, hãy nói rõ điều đó.
     required String body,
     required String from,
     String? userFeedback,
+    String? locale, // Add locale parameter
   }) async {
     int maxRetries = _availableModels.length; // Thử tất cả models
     int attempt = 0;
@@ -212,7 +213,12 @@ Nếu thông tin chưa đủ để kết luận, hãy nói rõ điều đó.
           body: body,
           from: from,
           userFeedback: userFeedback,
+          locale: locale,
         );
+
+        print('=== DEBUG: GENERATED PROMPT ===');
+        print(prompt);
+        print('===============================');
 
         print('Sending request to Gemini...');
         final response = await _model.generateContent([Content.text(prompt)]);
@@ -313,23 +319,40 @@ Quy tắc:
     required String body,
     required String from,
     String? userFeedback,
+    String? locale,
   }) {
-    final locale = LocaleService().locale.value ?? const Locale('vi');
-    final isEnglish = locale.languageCode == 'en';
+    // Use provided locale or fallback to LocaleService
+    final effectiveLocale =
+        locale ?? LocaleService().locale.value?.languageCode ?? 'vi';
+    final isEnglish = effectiveLocale == 'en';
 
+    // Feedback section - Relaxed constraints, no "valid reason" required
     final feedbackSection = (userFeedback != null && userFeedback.isNotEmpty)
         ? (isEnglish
-              ? '\nUSER FEEDBACK: "$userFeedback"\n(Please consider this feedback in your analysis. If the user points out a valid safety concern or explains why it is safe, adjust the risk score accordingly.)\n'
-              : '\nPHẢN HỒI CỦA NGƯỜI DÙNG: "$userFeedback"\n(Hãy xem xét phản hồi này trong phân tích của bạn. Nếu người dùng chỉ ra mối lo ngại an toàn hợp lý hoặc giải thích tại sao nó an toàn, hãy điều chỉnh điểm rủi ro cho phù hợp.)\n')
+              ? '\n*** CRITICAL INSTRUCTION OVERRIDE ***\n'
+                    'USER FEEDBACK: "$userFeedback"\n'
+                    'INSTRUCTION: The user has explicitly reviewed this email. '
+                    'You MUST trust the user\'s judgment for this re-analysis. '
+                    'If the user says it is SAFE/NORMAL, set risk_score = 0 and risk_level = "Low". '
+                    'If the user says it is DANGEROUS/PHISHING, set risk_score = 100 and risk_level = "Critical". '
+                    'Ignore previous indicators if they contradict the user\'s explicit feedback.\n'
+              : '\n*** CHỈ DẪN ƯU TIÊN CAO NHẤT ***\n'
+                    'PHẢN HỒI CỦA NGƯỜI DÙNG: "$userFeedback"\n'
+                    'CHỈ DẪN: Người dùng đã trực tiếp xem xét email này. '
+                    'Bạn PHẢI tin tưởng đánh giá của người dùng trong lần phân tích lại này. '
+                    'Nếu người dùng bảo là AN TOÀN/BÌNH THƯỜNG, hãy đặt risk_score = 0 và risk_level = "Low". '
+                    'Nếu người dùng bảo là NGUY HIỂM/LỪA ĐẢO, hãy đặt risk_score = 100 và risk_level = "Critical". '
+                    'Bỏ qua các dấu hiệu nghi ngờ trước đó nếu chúng mâu thuẫn với phản hồi của người dùng.\n')
         : '';
 
     return isEnglish
         ? '''
-Analyze the email for phishing indicators and ONLY return ONE valid JSON object (no markdown, no explanatory text).
+Analyze the email for phishing indicators and ONLY return ONE valid JSON object.
 
 FROM:$from
 SUBJECT:$subject
 BODY:$body
+
 $feedbackSection
 
 Example JSON (keep the keys, change the values):
@@ -337,6 +360,17 @@ Example JSON (keep the keys, change the values):
   "risk_score": 15,
   "risk_level": "Low",
   "summary": "short summary",
+  "criteria_evaluation": {
+    "sender_authenticity": true,
+    "personalization_level": true,
+    "urgency_and_threat": true,
+    "sensitive_data_request": true,
+    "language_quality": true,
+    "link_suspicion": true,
+    "attachment_risk": true,
+    "logical_consistency": true,
+    "technical_header_flags": true
+  },
   "detailed_analysis": {
     "sender_analysis": "sender analysis",
     "content_analysis": "content analysis",
@@ -348,16 +382,27 @@ Example JSON (keep the keys, change the values):
 }
 
 Rules:
-- risk_score: number 0–100 (0 safe, 100 very dangerous).
+- risk_score: number 0–100.
 - risk_level: one of "Low", "Medium", "High", "Critical".
+- criteria_evaluation: evaluate each criterion (true = pass, false = fail):
+  * sender_authenticity: Does the email address match the claimed organization? Check for typosquatting.
+  * personalization_level: Is the email personalized with recipient's name or generic ("Customer", "User")?
+  * urgency_and_threat: Does it use pressure tactics, threats (account lock), or unrealistic promises?
+  * sensitive_data_request: Does it ask for passwords, PINs, OTPs, or personal info via email/form?
+  * language_quality: Are there spelling/grammar errors or unprofessional writing?
+  * link_suspicion: Do display text and actual URLs differ? Are there suspicious characters in URLs?
+  * attachment_risk: Are there unexpected attachments or files requiring macros?
+  * logical_consistency: Does the content match recent user activities? (e.g., payment notice for unused service)
+  * technical_header_flags: Are email headers forged or technically suspicious?
 - Do not add any text outside the JSON.
 '''
         : '''
-Phân tích email có dấu hiệu phishing và CHỈ trả về MỘT JSON hợp lệ (không markdown, không text giải thích).
+Phân tích email có dấu hiệu phishing và CHỈ trả về MỘT JSON hợp lệ.
 
 FROM:$from
 SUBJECT:$subject
 BODY:$body
+
 $feedbackSection
 
 JSON mẫu (giữ nguyên key, thay giá trị):
@@ -365,6 +410,17 @@ JSON mẫu (giữ nguyên key, thay giá trị):
   "risk_score": 15,
   "risk_level": "Low",
   "summary": "tóm tắt ngắn gọn",
+  "criteria_evaluation": {
+    "sender_authenticity": true,
+    "personalization_level": true,
+    "urgency_and_threat": true,
+    "sensitive_data_request": true,
+    "language_quality": true,
+    "link_suspicion": true,
+    "attachment_risk": true,
+    "logical_consistency": true,
+    "technical_header_flags": true
+  },
   "detailed_analysis": {
     "sender_analysis": "phân tích người gửi",
     "content_analysis": "phân tích nội dung",
@@ -376,8 +432,18 @@ JSON mẫu (giữ nguyên key, thay giá trị):
 }
 
 Quy tắc:
-- risk_score: số 0-100 (0 an toàn, 100 rất nguy hiểm).
+- risk_score: số 0-100.
 - risk_level: một trong "Low", "Medium", "High", "Critical".
+- criteria_evaluation: đánh giá từng tiêu chí (true = đạt, false = không đạt):
+  * sender_authenticity: Địa chỉ email có khớp với tổ chức? Kiểm tra lỗi chính tả tên miền.
+  * personalization_level: Email có gọi tên người nhận hay dùng từ chung chung ("Khách hàng", "Bạn")?
+  * urgency_and_threat: Có tạo áp lực, đe dọa (khóa tài khoản) hay hứa hẹn phi lý?
+  * sensitive_data_request: Có yêu cầu mật khẩu, PIN, OTP, thông tin cá nhân qua email/form?
+  * language_quality: Có lỗi chính tả, ngữ pháp, văn phong không chuyên nghiệp?
+  * link_suspicion: Văn bản hiển thị và URL thực có khác nhau? URL có ký tự đáng ngờ?
+  * attachment_risk: Có tệp đính kèm không mong muốn hoặc yêu cầu bật Macro?
+  * logical_consistency: Nội dung có khớp với hoạt động gần đây? (VD: thông báo thanh toán cho dịch vụ không dùng)
+  * technical_header_flags: Header email có bị giả mạo hoặc bất thường về kỹ thuật?
 - Không thêm text ngoài JSON.
 ''';
   }
@@ -554,6 +620,23 @@ Quy tắc:
         reasons.add(json['summary'].toString());
       }
 
+      // Parse criteria_evaluation (9 criteria)
+      Map<String, bool> criteriaEvaluation = {};
+      if (json['criteria_evaluation'] != null) {
+        final criteria = json['criteria_evaluation'];
+        criteriaEvaluation = {
+          'sender_authenticity': criteria['sender_authenticity'] ?? true,
+          'personalization_level': criteria['personalization_level'] ?? true,
+          'urgency_and_threat': criteria['urgency_and_threat'] ?? true,
+          'sensitive_data_request': criteria['sensitive_data_request'] ?? true,
+          'language_quality': criteria['language_quality'] ?? true,
+          'link_suspicion': criteria['link_suspicion'] ?? true,
+          'attachment_risk': criteria['attachment_risk'] ?? true,
+          'logical_consistency': criteria['logical_consistency'] ?? true,
+          'technical_header_flags': criteria['technical_header_flags'] ?? true,
+        };
+      }
+
       return GeminiAnalysisResult(
         riskScore: riskScore,
         classification: classification,
@@ -566,6 +649,7 @@ Quy tắc:
             ? List<String>.from(json['recommendations'])
             : [],
         detailedAnalysis: detailedAnalysis,
+        criteriaEvaluation: criteriaEvaluation,
         rawResponse: responseText,
       );
     } catch (e, stackTrace) {
@@ -652,6 +736,7 @@ class GeminiAnalysisResult {
   final List<String> phishingIndicators;
   final List<String> recommendations;
   final Map<String, String> detailedAnalysis;
+  final Map<String, bool> criteriaEvaluation; // 9 criteria evaluation
   final String rawResponse;
 
   GeminiAnalysisResult({
@@ -662,6 +747,7 @@ class GeminiAnalysisResult {
     required this.phishingIndicators,
     required this.recommendations,
     required this.detailedAnalysis,
+    this.criteriaEvaluation = const {},
     required this.rawResponse,
   });
 
@@ -680,6 +766,7 @@ class GeminiAnalysisResult {
       'phishingIndicators': phishingIndicators,
       'recommendations': recommendations,
       'detailedAnalysis': detailedAnalysis,
+      'criteriaEvaluation': criteriaEvaluation,
       'rawResponse': rawResponse,
     };
   }
@@ -700,6 +787,9 @@ class GeminiAnalysisResult {
           : [],
       detailedAnalysis: json['detailedAnalysis'] != null
           ? Map<String, String>.from(json['detailedAnalysis'])
+          : {},
+      criteriaEvaluation: json['criteriaEvaluation'] != null
+          ? Map<String, bool>.from(json['criteriaEvaluation'])
           : {},
       rawResponse: json['rawResponse'] ?? '',
     );

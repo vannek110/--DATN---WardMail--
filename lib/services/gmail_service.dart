@@ -3,7 +3,8 @@ import 'package:googleapis/gmail/v1.dart' as gmail;
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:enough_mail/enough_mail.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:http/http.dart' show Client, BaseClient, BaseRequest, StreamedResponse;
+import 'package:http/http.dart'
+    show Client, BaseClient, BaseRequest, StreamedResponse;
 import '../models/email_message.dart';
 import 'auth_service.dart';
 import '../models/email_attachment.dart';
@@ -11,7 +12,7 @@ import '../models/email_attachment.dart';
 class GmailService {
   final AuthService _authService = AuthService();
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
-  
+
   // Gmail API - For Google Sign-In users
   Future<List<EmailMessage>> fetchEmailsViaGmailApi({
     int maxResults = 20,
@@ -25,7 +26,11 @@ class GmailService {
 
       // Create authenticated client
       final credentials = AccessCredentials(
-        AccessToken('Bearer', accessToken, DateTime.now().toUtc().add(const Duration(hours: 1))),
+        AccessToken(
+          'Bearer',
+          accessToken,
+          DateTime.now().toUtc().add(const Duration(hours: 1)),
+        ),
         null,
         [
           'https://www.googleapis.com/auth/gmail.readonly',
@@ -61,22 +66,24 @@ class GmailService {
       );
 
       final List<EmailMessage> emails = [];
-      
+
       if (messageList.messages != null) {
         // Fetch all messages in PARALLEL - much faster!
         final futures = messageList.messages!
             .where((m) => m.id != null)
-            .map((message) => gmailApi.users.messages.get(
-                  'me',
-                  message.id!,
-                  format: 'metadata',
-                  metadataHeaders: ['From', 'Subject'],
-                ))
+            .map(
+              (message) => gmailApi.users.messages.get(
+                'me',
+                message.id!,
+                format: 'metadata',
+                metadataHeaders: ['From', 'Subject'],
+              ),
+            )
             .toList();
-        
+
         // Wait for all API calls to complete at once
         final results = await Future.wait(futures);
-        
+
         // Parse all results (and fetch avatar URLs) in parallel
         final parsedFutures = results.map(_parseGmailMessage).toList();
         final parsedMessages = await Future.wait(parsedFutures);
@@ -108,7 +115,11 @@ class GmailService {
     }
 
     final credentials = AccessCredentials(
-      AccessToken('Bearer', accessToken, DateTime.now().toUtc().add(const Duration(hours: 1))),
+      AccessToken(
+        'Bearer',
+        accessToken,
+        DateTime.now().toUtc().add(const Duration(hours: 1)),
+      ),
       null,
       ['https://www.googleapis.com/auth/gmail.send'],
     );
@@ -150,15 +161,18 @@ class GmailService {
         final encodedData = base64.encode(attachment.data);
         messageBuffer
           ..writeln('--$boundary')
-          ..writeln('Content-Type: ${attachment.mimeType}; name="${attachment.fileName}"')
-          ..writeln('Content-Disposition: attachment; filename="${attachment.fileName}"')
+          ..writeln(
+            'Content-Type: ${attachment.mimeType}; name="${attachment.fileName}"',
+          )
+          ..writeln(
+            'Content-Disposition: attachment; filename="${attachment.fileName}"',
+          )
           ..writeln('Content-Transfer-Encoding: base64')
           ..writeln()
           ..writeln(encodedData);
       }
 
-      messageBuffer
-        ..writeln('--$boundary--');
+      messageBuffer..writeln('--$boundary--');
     } else {
       messageBuffer
         ..writeln('To: $to')
@@ -171,8 +185,7 @@ class GmailService {
     final bytes = utf8.encode(messageBuffer.toString());
     final base64Email = base64UrlEncode(bytes).replaceAll('=', '');
 
-    final message = gmail.Message()
-      ..raw = base64Email;
+    final message = gmail.Message()..raw = base64Email;
 
     await gmailApi.users.messages.send(message, 'me');
 
@@ -186,7 +199,11 @@ class GmailService {
     }
 
     final credentials = AccessCredentials(
-      AccessToken('Bearer', accessToken, DateTime.now().toUtc().add(const Duration(hours: 1))),
+      AccessToken(
+        'Bearer',
+        accessToken,
+        DateTime.now().toUtc().add(const Duration(hours: 1)),
+      ),
       null,
       ['https://www.googleapis.com/auth/gmail.modify'],
     );
@@ -209,7 +226,11 @@ class GmailService {
     }
 
     final credentials = AccessCredentials(
-      AccessToken('Bearer', accessToken, DateTime.now().toUtc().add(const Duration(hours: 1))),
+      AccessToken(
+        'Bearer',
+        accessToken,
+        DateTime.now().toUtc().add(const Duration(hours: 1)),
+      ),
       null,
       ['https://www.googleapis.com/auth/gmail.modify'],
     );
@@ -228,10 +249,10 @@ class GmailService {
   Future<EmailMessage?> _parseGmailMessage(gmail.Message message) async {
     try {
       final headers = message.payload?.headers ?? [];
-      
+
       String from = '';
       String subject = '';
-      
+
       for (var header in headers) {
         if (header.name == 'From') {
           from = _decodeMimeHeader(header.value);
@@ -282,7 +303,10 @@ class GmailService {
   String _decodeMimeHeader(String? value) {
     if (value == null || value.isEmpty) return '';
 
-    final encodedWordRegex = RegExp(r'=\?([^?]+)\?(B|Q)\?([^?]+)\?=', caseSensitive: false);
+    final encodedWordRegex = RegExp(
+      r'=\?([^?]+)\?(B|Q)\?([^?]+)\?=',
+      caseSensitive: false,
+    );
 
     return value.replaceAllMapped(encodedWordRegex, (match) {
       final encoding = match.group(2)?.toUpperCase();
@@ -327,13 +351,13 @@ class GmailService {
     try {
       final email = await _getStoredEmail();
       final appPassword = await _getStoredAppPassword();
-      
+
       if (email == null || appPassword == null) {
         throw Exception('Email or App Password not configured');
       }
 
       final client = ImapClient(isLogEnabled: false);
-      
+
       await client.connectToServer('imap.gmail.com', 993, isSecure: true);
       await client.login(email, appPassword);
       // Hiện tại: luôn đọc INBOX cho tài khoản IMAP
@@ -345,7 +369,7 @@ class GmailService {
       );
 
       final List<EmailMessage> emails = [];
-      
+
       for (var message in fetchResult.messages) {
         final emailMessage = _parseImapMessage(message);
         if (emailMessage != null) {
@@ -354,7 +378,7 @@ class GmailService {
       }
 
       await client.logout();
-      
+
       return emails;
     } catch (error) {
       print('Error fetching emails via IMAP: $error');
@@ -409,9 +433,12 @@ class GmailService {
     String folder = 'inbox',
   }) async {
     final loginMethod = await _authService.getLoginMethod();
-    
+
     if (loginMethod == 'google') {
-      return await fetchEmailsViaGmailApi(maxResults: maxResults, folder: folder);
+      return await fetchEmailsViaGmailApi(
+        maxResults: maxResults,
+        folder: folder,
+      );
     } else {
       return await fetchEmailsViaImap(maxResults: maxResults, folder: folder);
     }

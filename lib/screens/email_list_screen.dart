@@ -88,17 +88,14 @@ class _EmailListScreenState extends State<EmailListScreen> {
         .replaceAll('&quot;', '"')
         .replaceAll('&#39;', "'");
 
-    result = result.replaceAllMapped(
-      RegExp(r'&#(\d+);'),
-      (m) {
-        try {
-          final code = int.parse(m.group(1)!);
-          return String.fromCharCode(code);
-        } catch (_) {
-          return m.group(0)!;
-        }
-      },
-    );
+    result = result.replaceAllMapped(RegExp(r'&#(\d+);'), (m) {
+      try {
+        final code = int.parse(m.group(1)!);
+        return String.fromCharCode(code);
+      } catch (_) {
+        return m.group(0)!;
+      }
+    });
 
     return result;
   }
@@ -157,9 +154,7 @@ class _EmailListScreenState extends State<EmailListScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final key = await _buildCacheKey();
-      final data = emails
-          .map((e) => jsonEncode(e.toJson()))
-          .toList();
+      final data = emails.map((e) => jsonEncode(e.toJson())).toList();
       await prefs.setStringList(key, data);
     } catch (_) {
       // ignore cache errors
@@ -277,7 +272,9 @@ class _EmailListScreenState extends State<EmailListScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
-    final onSurface = Theme.of(context).textTheme.bodyMedium?.color ?? const Color(0xFF202124);
+    final onSurface =
+        Theme.of(context).textTheme.bodyMedium?.color ??
+        const Color(0xFF202124);
 
     return DefaultTabController(
       length: 3,
@@ -304,11 +301,7 @@ class _EmailListScreenState extends State<EmailListScreen> {
                 ),
                 child: Padding(
                   padding: EdgeInsets.all(2.0),
-                  child: Icon(
-                    Icons.check,
-                    size: 12,
-                    color: Colors.white,
-                  ),
+                  child: Icon(Icons.check, size: 12, color: Colors.white),
                 ),
               ),
             ],
@@ -379,7 +372,9 @@ class _EmailListScreenState extends State<EmailListScreen> {
           onPressed: () async {
             final sent = await Navigator.push<bool>(
               context,
-              MaterialPageRoute(builder: (context) => const ComposeEmailScreen()),
+              MaterialPageRoute(
+                builder: (context) => const ComposeEmailScreen(),
+              ),
             );
 
             if (!mounted) return;
@@ -469,9 +464,7 @@ class _EmailListScreenState extends State<EmailListScreen> {
   Widget _buildBody() {
     // Chỉ hiển thị loading full màn khi chưa có dữ liệu nào
     if (_isLoading && _emails.isEmpty) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_errorMessage == 'need_setup') {
@@ -487,11 +480,7 @@ class _EmailListScreenState extends State<EmailListScreen> {
       return _buildEmpty();
     }
 
-    return Column(
-      children: [
-        Expanded(child: _buildEmailList()),
-      ],
-    );
+    return Column(children: [Expanded(child: _buildEmailList())]);
   }
 
   Widget _buildSetupRequired() {
@@ -511,7 +500,7 @@ class _EmailListScreenState extends State<EmailListScreen> {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                  color: const Color(0xFF4285F4).withValues(alpha: 0.3),
+                    color: const Color(0xFF4285F4).withValues(alpha: 0.3),
                     blurRadius: 16,
                     offset: const Offset(0, 8),
                   ),
@@ -526,19 +515,13 @@ class _EmailListScreenState extends State<EmailListScreen> {
             const SizedBox(height: 24),
             Text(
               l.t('email_list_setup_title'),
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             Text(
               l.t('email_list_setup_description'),
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 32),
             Container(
@@ -549,7 +532,7 @@ class _EmailListScreenState extends State<EmailListScreen> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                  color: const Color(0xFF4285F4).withValues(alpha: 0.3),
+                    color: const Color(0xFF4285F4).withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -560,12 +543,19 @@ class _EmailListScreenState extends State<EmailListScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
+                  ),
                 ),
                 icon: const Icon(Icons.settings, color: Colors.white),
                 label: Text(
                   l.t('email_list_setup_button'),
-                  style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -585,18 +575,11 @@ class _EmailListScreenState extends State<EmailListScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 80,
-              color: Colors.red[300],
-            ),
+            Icon(Icons.error_outline, size: 80, color: Colors.red[300]),
             const SizedBox(height: 24),
             Text(
               l.t('email_list_error_title'),
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             Container(
@@ -653,11 +636,7 @@ class _EmailListScreenState extends State<EmailListScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.inbox,
-            size: 80,
-            color: Colors.grey[300],
-          ),
+          Icon(Icons.inbox, size: 80, color: Colors.grey[300]),
           const SizedBox(height: 24),
           Text(
             l.t('email_list_empty_title'),
@@ -782,8 +761,7 @@ class _EmailListScreenState extends State<EmailListScreen> {
     if (_loginMethod != 'google') {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text(l.t('email_list_snackbar_restore_google_only')),
+          content: Text(l.t('email_list_snackbar_restore_google_only')),
           backgroundColor: Colors.orange,
         ),
       );
@@ -810,10 +788,7 @@ class _EmailListScreenState extends State<EmailListScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('$e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -831,8 +806,7 @@ class _EmailListScreenState extends State<EmailListScreen> {
     if (_loginMethod != 'google') {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text(l.t('email_list_snackbar_delete_google_only')),
+          content: Text(l.t('email_list_snackbar_delete_google_only')),
           backgroundColor: Colors.orange,
         ),
       );
@@ -899,17 +873,13 @@ class _EmailListScreenState extends State<EmailListScreen> {
               final key = _gmailSuggestedQuestionKeys[index];
               final q = l.t(key);
               return ActionChip(
-                label: Text(
-                  q,
-                  style: const TextStyle(fontSize: 12),
-                ),
+                label: Text(q, style: const TextStyle(fontSize: 12)),
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => GmailAiChatScreen(
-                        initialQuestion: q,
-                      ),
+                      builder: (context) =>
+                          GmailAiChatScreen(initialQuestion: q),
                     ),
                   );
                 },
@@ -928,18 +898,19 @@ class _EmailListScreenState extends State<EmailListScreen> {
 
     // Kiểm tra email đã được scan chưa
     final scanResult = _scanResults[email.id];
-    
+
     // Xác định màu sắc dựa trên kết quả scan
     Color? borderColor;
     Color? bgColor;
     IconData? statusIcon;
-    
+
     if (scanResult != null) {
       // ✅ FIX: Tính toán lại màu dựa vào riskScore thay vì tin vào result string cũ
       // Lấy riskScore từ analysisDetails (0-1 scale)
-      final riskScore = scanResult.analysisDetails['riskScore'] as double? ?? 0.5;
+      final riskScore =
+          scanResult.analysisDetails['riskScore'] as double? ?? 0.5;
       final riskScorePercent = riskScore * 100; // Convert sang 0-100
-      
+
       // Phân loại lại theo logic mới: 0-25 = safe, 26-50 = suspicious, 51-100 = phishing
       if (riskScorePercent < 26) {
         // AN TOÀN - Xanh lá
@@ -966,7 +937,7 @@ class _EmailListScreenState extends State<EmailListScreen> {
     }
 
     final baseAvatarColor = _avatarColorFor(email.from);
-    
+
     final bool isSelected = _selectedEmailIds.contains(email.id);
 
     return Container(
@@ -974,7 +945,7 @@ class _EmailListScreenState extends State<EmailListScreen> {
       decoration: BoxDecoration(
         color: bgColor ?? theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: borderColor != null 
+        border: borderColor != null
             ? Border.all(color: borderColor, width: 2)
             : null,
         boxShadow: [
@@ -1006,78 +977,84 @@ class _EmailListScreenState extends State<EmailListScreen> {
                 baseAvatarColor: baseAvatarColor,
                 statusIcon: statusIcon,
               ),
-      title: Text(
-        email.subject,
-        style: TextStyle(
-          fontWeight: email.isRead ? FontWeight.normal : FontWeight.bold,
+        title: Text(
+          email.subject,
+          style: TextStyle(
+            fontWeight: email.isRead ? FontWeight.normal : FontWeight.bold,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            email.from,
-            style: const TextStyle(fontSize: 13),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            _decodeHtmlEntities(email.snippet),
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              email.from,
+              style: const TextStyle(fontSize: 13),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-      trailing: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            _formatDate(email.date),
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
-          ),
-          if (scanResult != null && scanResult.result == 'unknown') ...[
             const SizedBox(height: 4),
-            IconButton(
-              icon: const Icon(Icons.refresh, size: 18),
-              color: Colors.orange[700],
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              tooltip: l.t('email_detail_reanalyze'),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => EmailDetailScreen(email: email),
-                  ),
-                );
-              },
+            Text(
+              _decodeHtmlEntities(email.snippet),
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
-          if (!email.isRead) ...[
-            const SizedBox(height: 4),
-            Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
-                color: Color(0xFF4285F4),
-                shape: BoxShape.circle,
+        ),
+        trailing: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              _formatDate(email.date),
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+            if (scanResult != null && scanResult.result == 'unknown') ...[
+              const SizedBox(height: 4),
+              IconButton(
+                icon: const Icon(Icons.refresh, size: 18),
+                color: Colors.orange[700],
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                tooltip: l.t('email_detail_reanalyze'),
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => EmailDetailScreen(email: email),
+                    ),
+                  );
+                  // Reload scan results when returning from detail screen
+                  if (mounted) {
+                    final scanHistory = await _scanHistoryService
+                        .getScanHistory();
+                    final scanMap = <String, ScanResult>{};
+                    for (var scan in scanHistory) {
+                      scanMap[scan.emailId] = scan;
+                    }
+                    setState(() {
+                      _scanResults = scanMap;
+                    });
+                  }
+                },
               ),
-            ),
+            ],
+            if (!email.isRead) ...[
+              const SizedBox(height: 4),
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF4285F4),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ],
           ],
-        ],
-      ),
+        ),
         onTap: () {
           if (_selectionMode) {
             setState(() {
@@ -1093,7 +1070,19 @@ class _EmailListScreenState extends State<EmailListScreen> {
               MaterialPageRoute(
                 builder: (context) => EmailDetailScreen(email: email),
               ),
-            );
+            ).then((_) async {
+              // Reload scan results when returning from detail screen
+              if (mounted) {
+                final scanHistory = await _scanHistoryService.getScanHistory();
+                final scanMap = <String, ScanResult>{};
+                for (var scan in scanHistory) {
+                  scanMap[scan.emailId] = scan;
+                }
+                setState(() {
+                  _scanResults = scanMap;
+                });
+              }
+            });
           }
         },
         onLongPress: () {
@@ -1190,15 +1179,24 @@ class _EmailListScreenState extends State<EmailListScreen> {
                     ),
                     const SizedBox(width: 12),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.transparent : riskColor.withValues(alpha: 0.1),
+                        color: isDark
+                            ? Colors.transparent
+                            : riskColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: riskColor),
                       ),
                       child: Text(
                         riskLabel,
-                        style: TextStyle(fontSize: 11, color: riskColor, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: riskColor,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],
@@ -1223,7 +1221,8 @@ class _EmailListScreenState extends State<EmailListScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => EmailDetailScreen(email: email),
+                            builder: (context) =>
+                                EmailDetailScreen(email: email),
                           ),
                         );
                       },
@@ -1309,14 +1308,13 @@ class _SenderAvatarState extends State<_SenderAvatar> {
     final statusIcon = widget.statusIcon;
 
     final backgroundColor =
-        borderColor?.withValues(alpha: 0.16) ?? baseColor.withValues(alpha: 0.16);
+        borderColor?.withValues(alpha: 0.16) ??
+        baseColor.withValues(alpha: 0.16);
 
     final avatar = CircleAvatar(
       backgroundColor: backgroundColor,
       child: Text(
-        widget.email.from.isNotEmpty
-            ? widget.email.from[0].toUpperCase()
-            : '?',
+        widget.email.from.isNotEmpty ? widget.email.from[0].toUpperCase() : '?',
         style: TextStyle(
           color: borderColor ?? baseColor,
           fontWeight: FontWeight.bold,
@@ -1336,15 +1334,10 @@ class _SenderAvatarState extends State<_SenderAvatar> {
                 color: Colors.white,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                statusIcon,
-                size: 14,
-                color: borderColor,
-              ),
+              child: Icon(statusIcon, size: 14, color: borderColor),
             ),
           ),
       ],
     );
   }
 }
-
