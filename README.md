@@ -187,6 +187,7 @@ This project is developed for educational and research purposes.
 **Team 2**
 - Email: vannek1100@gmail.com
 - Email: datlecong156@gmail.com
+- Email: dong160805@gmail.com
 
 
 ## 📞 Contact
