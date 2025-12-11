@@ -1,4 +1,4 @@
-# Email Phishing Detection Application (GuardMail)
+# Email Phishing Detection Application (WardMail)
 
 A mobile application developed with Flutter to help users detect and protect against phishing emails. The app integrates multi-factor authentication and a user-friendly interface.
 
