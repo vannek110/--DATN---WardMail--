@@ -26,3 +26,18 @@ linter:
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
+
+# ==============================================================================
+# LINTER CONFIGURATION & CODE STYLE GUIDELINES
+# ==============================================================================
+# This configuration inherits from the official Flutter linting package.
+# It enforces strict type checking and style consistency across the codebase.
+#
+# DISABLED RULES EXPLANATION:
+# - public_member_api_docs: Temporarily disabled to speed up development.
+#   Will be re-enabled in the Release Candidate (RC) phase.
+# - lines_longer_than_80_chars: Relaxed to 120 chars to accommodate
+#   complex widget tree structures standard in Flutter development.
+#
+# TODO: Integrate with CI/CD pipeline to auto-reject commits violating these rules.
+# ==============================================================================
