@@ -410,3 +410,12 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
     );
   }
 }
+
+// -----------------------------------------------------------------------
+      // TODO: FUTURE UI ENHANCEMENTS (PENDING APPROVAL)
+      // -----------------------------------------------------------------------
+      // 1. Animation: Consider adding a Hero animation here for smoother
+      //    transitions between the list view and detail view.
+      // 2. Localization: Prepare strings for internationalization (i18n).
+      // 3. Haptics: Add subtle vibration feedback on user interaction.
+      // -----------------------------------------------------------------------

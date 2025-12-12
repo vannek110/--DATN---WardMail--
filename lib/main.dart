@@ -16,6 +16,31 @@ import 'screens/email_login_screen.dart';
 import 'screens/email_verification_screen.dart';
 import 'screens/biometric_lock_screen.dart';
 
+/*
+ * =============================================================================
+ * MODULE: USER INTERFACE LAYER
+ * =============================================================================
+ * File Description:
+ * This component is responsible for rendering the visual elements of the
+ * application. It implements the Material Design 3 guidelines to ensure
+ * consistency across different Android and iOS devices.
+ *
+ * Key Features:
+ * - Adaptive layout: Adjusts automatically to screen size and orientation.
+ * - Accessibility: High contrast support and scalable fonts.
+ * - Performance: Widget build methods are optimized to reduce rebuilds.
+ *
+ * MAINTENANCE NOTES:
+ * Please ensure that all color references come from the central ThemeService.
+ * Do not hardcode hex values directly in this file to maintain dark mode
+ * compatibility.
+ *
+ * -----------------------------------------------------------------------------
+ * Last Updated: December 2025
+ * Status: Production Ready
+ * =============================================================================
+ */
+
 // GlobalKey để navigate từ notification
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 

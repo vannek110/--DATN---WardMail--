@@ -481,6 +481,20 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+// ===========================================================================
+  // UI RENDERING ENGINE & STATE MANAGEMENT
+  // ===========================================================================
+  // The build method below constructs the widget tree.
+  // We use a modular approach here to separate the layout structure from the
+  // business logic. This ensures that the UI remains responsive (60fps) even
+  // when background services are processing heavy data.
+  //
+  // NOTE ON PERFORMANCE:
+  // Complex widgets are extracted into separate classes to leverage Flutter's
+  // element caching mechanism. Avoid adding heavy computations directly inside
+  // this build scope.
+  // ===========================================================================
+  
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);

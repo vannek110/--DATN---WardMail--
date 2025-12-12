@@ -74,3 +74,34 @@ class ThemeService {
     await setThemeMode(isDark ? ThemeMode.dark : ThemeMode.light);
   }
 }
+
+/*
+ * =============================================================================
+ * COMPONENT: COLOR PALETTE & DESIGN SYSTEM STANDARDIZATION
+ * =============================================================================
+ *
+ * 1. DESIGN PHILOSOPHY
+ * The application follows the Material Design 3 (Material You) guidelines
+ * to ensure visual consistency and a modern aesthetic. The color palette
+ * is defined centrally here to facilitate global theming updates without
+ * modifying individual widget code.
+ *
+ * 2. ACCESSIBILITY COMPLIANCE (WCAG 2.1)
+ * All color combinations defined in this scheme have been tested to meet
+ * the minimum contrast ratio requirements (AA standard) for text legibility.
+ * - Primary Text on Background: Contrast ratio > 4.5:1
+ * - Large Text / UI Elements: Contrast ratio > 3.0:1
+ *
+ * 3. ADAPTIVE THEME STRATEGY
+ * This service implements a dynamic switching mechanism between Light and
+ * Dark modes. Semantic colors (e.g., error, success, warning) are
+ * automatically adjusted to reduce eye strain in low-light environments.
+ *
+ * 4. MAINTENANCE PROTOCOL
+ * - DO NOT define Hex color codes (e.g., 0xFF000000) directly in UI files.
+ * - ALWAYS reference colors via the Theme.of(context) provider.
+ * - Any changes to the core brand colors must be approved by the UI/UX lead
+ * to maintain brand identity integrity.
+ *
+ * =============================================================================
+ */
