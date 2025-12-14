@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>reCAPTCHA</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f8f9fa;
+      }
+      .wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+      }
+    </style>
+    <!-- reCAPTCHA Enterprise (web) -->
+    <script src="https://www.google.com/recaptcha/enterprise.js" async defer></script>
+    <script>
+      function onRecaptchaSuccess(token) {
+        if (window.Recaptcha && window.Recaptcha.postMessage) {
+          window.Recaptcha.postMessage(token);
+        } else if (window.Recaptcha) {
+          // Fallback trong một số WebView
+          Recaptcha.postMessage(token);
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div
+        class="g-recaptcha"
+        data-sitekey="6LflQw8sAAAAAMvsD04eUxOdjCSJf5v2xoS6R2Wc"
+        data-callback="onRecaptchaSuccess"
+      ></div>
+    </div>
+  </body>
+  
+</html>
