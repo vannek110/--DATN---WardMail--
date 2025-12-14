@@ -51,7 +51,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     if (user != null) {
       final biometricEnabled = await _biometricService.isBiometricEnabled();
       final sessionActive = _biometricService.isSessionActive();
-      
+
       if (mounted) {
         setState(() {
           _shouldShowBiometric = biometricEnabled && !sessionActive;
@@ -79,16 +79,11 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(
-                    color: Colors.deepPurple,
-                  ),
+                  CircularProgressIndicator(color: Colors.deepPurple),
                   SizedBox(height: 16),
                   Text(
                     'Đang tải...',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
                   ),
                 ],
               ),
@@ -96,8 +91,9 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
           );
         }
 
-        // Schedule biometric check AFTER build completes
-        if (snapshot.connectionState == ConnectionState.active && _isCheckingBiometric) {
+        // Lên lịch kiểm tra sinh trắc học SAU KHI quá trình build hoàn tất
+        if (snapshot.connectionState == ConnectionState.active &&
+            _isCheckingBiometric) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _checkBiometricRequirement(snapshot.data);
           });
@@ -105,12 +101,15 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
 
         if (snapshot.hasData) {
           final user = snapshot.data!;
-          
+
           if (_shouldShowBiometric) {
             return const BiometricLockScreen();
           }
-          
-          if (user.emailVerified || user.providerData.any((info) => info.providerId == 'google.com')) {
+
+          if (user.emailVerified ||
+              user.providerData.any(
+                (info) => info.providerId == 'google.com',
+              )) {
             return const HomeScreen();
           } else {
             return const EmailVerificationScreen();

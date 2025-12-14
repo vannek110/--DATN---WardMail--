@@ -21,19 +21,22 @@ class AuthService {
   Future<Map<String, dynamic>?> signInWithGoogle() async {
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      
+
       if (googleUser == null) {
         return null;
       }
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+      final UserCredential userCredential = await _auth.signInWithCredential(
+        credential,
+      );
       final User? user = userCredential.user;
 
       if (user != null) {
@@ -48,7 +51,7 @@ class AuthService {
         await _saveUserData(userData);
         return userData;
       }
-      
+
       return null;
     } catch (error) {
       print('Error signing in with Google: $error');
@@ -60,20 +63,20 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_data', jsonEncode(userData));
 
-    // Giữ lại locale & theme hiện tại (có thể user vừa chọn ở màn login)
+    // Giữ lại ngôn ngữ & giao diện hiện tại (có thể người dùng vừa chọn ở màn hình đăng nhập)
     final currentLocale = LocaleService().locale.value;
     final currentTheme = ThemeService().themeMode.value;
 
-    // Reload dữ liệu theo từng user (thông báo, theme, locale)
+    // Tải lại dữ liệu theo từng người dùng (thông báo, giao diện, ngôn ngữ)
     await NotificationService().reloadForCurrentUser();
 
-    // Theme: nếu user vừa chọn theme, ưu tiên dùng theme đó cho user mới
+    // Giao diện: nếu người dùng vừa chọn giao diện, ưu tiên dùng giao diện đó cho người dùng mới
     await ThemeService().loadTheme();
     if (currentTheme != ThemeService().themeMode.value) {
       await ThemeService().setThemeMode(currentTheme);
     }
 
-    // Locale: nếu user vừa chọn language, lưu lại cho user mới
+    // Ngôn ngữ: nếu người dùng vừa chọn ngôn ngữ, lưu lại cho người dùng mới
     await LocaleService().loadLocale();
     if (currentLocale != null) {
       await LocaleService().setLocale(currentLocale);
@@ -81,14 +84,14 @@ class AuthService {
   }
 
   Future<Map<String, dynamic>?> getCurrentUser() async {
-    // Always get from SharedPreferences to preserve loginMethod
+    // Luôn lấy từ SharedPreferences để giữ lại phương thức đăng nhập
     final prefs = await SharedPreferences.getInstance();
     final userDataString = prefs.getString('user_data');
     if (userDataString != null) {
       return jsonDecode(userDataString);
     }
-    
-    // Fallback to Firebase user
+
+    // Dự phòng sang người dùng Firebase
     final User? user = _auth.currentUser;
     if (user != null) {
       return {
@@ -98,7 +101,7 @@ class AuthService {
         'photoUrl': user.photoURL,
       };
     }
-    
+
     return null;
   }
 
@@ -117,27 +120,25 @@ class AuthService {
 
   User? get currentUser => _auth.currentUser;
 
-  // Email/Password Authentication
+  // Xác thực Email/Mật khẩu
   Future<Map<String, dynamic>?> signUpWithEmail({
     required String email,
     required String password,
     required String displayName,
   }) async {
     try {
-      final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      
+      final UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(email: email, password: password);
+
       final User? user = userCredential.user;
-      
+
       if (user != null) {
-        // Update display name
+        // Cập nhật tên hiển thị
         await user.updateDisplayName(displayName);
-        
-        // Send email verification
+
+        // Gửi email xác thực
         await user.sendEmailVerification();
-        
+
         final userData = {
           'uid': user.uid,
           'email': user.email,
@@ -146,11 +147,11 @@ class AuthService {
           'emailVerified': user.emailVerified,
           'loginMethod': 'email',
         };
-        
+
         await _saveUserData(userData);
         return userData;
       }
-      
+
       return null;
     } catch (error) {
       print('Error signing up with email: $error');
@@ -163,13 +164,11 @@ class AuthService {
     required String password,
   }) async {
     try {
-      final UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      
+      final UserCredential userCredential = await _auth
+          .signInWithEmailAndPassword(email: email, password: password);
+
       final User? user = userCredential.user;
-      
+
       if (user != null) {
         final userData = {
           'uid': user.uid,
@@ -179,11 +178,11 @@ class AuthService {
           'emailVerified': user.emailVerified,
           'loginMethod': 'email',
         };
-        
+
         await _saveUserData(userData);
         return userData;
       }
-      
+
       return null;
     } catch (error) {
       print('Error signing in with email: $error');
@@ -226,13 +225,13 @@ class AuthService {
     }
   }
 
-  // Check login method
+  // Kiểm tra phương thức đăng nhập
   Future<String?> getLoginMethod() async {
     final userData = await getCurrentUser();
     return userData?['loginMethod'] as String?;
   }
 
-  // Get Google Access Token for Gmail API
+  // Lấy mã thông báo truy cập Google cho API Gmail
   Future<String?> getGoogleAccessToken() async {
     try {
       final GoogleSignInAccount? account = await _googleSignIn.signInSilently();

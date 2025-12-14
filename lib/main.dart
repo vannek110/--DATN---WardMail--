@@ -16,35 +16,35 @@ import 'screens/email_login_screen.dart';
 import 'screens/email_verification_screen.dart';
 import 'screens/biometric_lock_screen.dart';
 
-// GlobalKey để navigate từ notification
+// GlobalKey để điều hướng từ thông báo
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
+  // Khởi tạo Firebase
   await Firebase.initializeApp();
 
-  // Load environment variables
+  // Tải biến môi trường
   await dotenv.load(fileName: ".env");
 
-  // Initialize notification service
+  // Khởi tạo dịch vụ thông báo
   await NotificationService().initialize();
 
-  // Set navigator key cho notification service
+  // Thiết lập navigator key cho dịch vụ thông báo
   NotificationService.setNavigatorKey(navigatorKey);
 
-  // Initialize background email service (WorkManager)
+  // Khởi tạo dịch vụ email nền (WorkManager)
   await BackgroundEmailService.initialize();
 
   // ✅ TỰ ĐỘNG CHECK VÀ RESTART BACKGROUND SERVICE NẾU CẦN
   // Sẽ tự động chạy ngay cả sau khi reboot device
   await AutoStartService.checkAndRestart();
 
-  // Load theme mode đã lưu
+  // Tải chế độ giao diện đã lưu
   await ThemeService().loadTheme();
 
-  // Load locale đã lưu
+  // Tải ngôn ngữ đã lưu
   await LocaleService().loadLocale();
 
   runApp(const MyApp());

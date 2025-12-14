@@ -19,7 +19,7 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
+
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -91,7 +91,7 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
       }
     } on FirebaseAuthException catch (e) {
       String errorMsg = l.t('error_generic');
-      
+
       switch (e.code) {
         case 'email-already-in-use':
           errorMsg = l.t('error_email_already_in_use');
@@ -177,8 +177,7 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
-                      color: theme.textTheme.bodySmall?.color
-                          ?.withOpacity(0.7),
+                      color: theme.textTheme.bodySmall?.color?.withOpacity(0.7),
                     ),
                   ),
                   const SizedBox(height: 28),
@@ -197,12 +196,19 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.error_outline, color: Colors.red[700], size: 20),
+                          Icon(
+                            Icons.error_outline,
+                            color: Colors.red[700],
+                            size: 20,
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               _errorMessage!,
-                              style: TextStyle(color: Colors.red[700], fontSize: 13),
+                              style: TextStyle(
+                                color: Colors.red[700],
+                                fontSize: 13,
+                              ),
                             ),
                           ),
                         ],
@@ -228,7 +234,10 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFF4285F4), width: 2),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF4285F4),
+                          width: 2,
+                        ),
                       ),
                     ),
                     validator: (value) {
@@ -260,14 +269,19 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFF4285F4), width: 2),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF4285F4),
+                          width: 2,
+                        ),
                       ),
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return l.t('validation_enter_email');
                       }
-                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                      if (!RegExp(
+                        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                      ).hasMatch(value)) {
                         return l.t('validation_email_invalid');
                       }
                       return null;
@@ -285,7 +299,9 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
                       ),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                          _obscurePassword
+                              ? Icons.visibility_off_rounded
+                              : Icons.visibility_rounded,
                           color: theme.iconTheme.color?.withOpacity(0.8),
                         ),
                         onPressed: () {
@@ -306,7 +322,10 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFF4285F4), width: 2),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF4285F4),
+                          width: 2,
+                        ),
                       ),
                     ),
                     onChanged: (value) {
@@ -324,7 +343,9 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
                       final hasUpper = RegExp(r'[A-Z]').hasMatch(value);
                       final hasLower = RegExp(r'[a-z]').hasMatch(value);
                       final hasDigit = RegExp(r'[0-9]').hasMatch(value);
-                      final hasSpecial = RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(value);
+                      final hasSpecial = RegExp(
+                        r'[!@#\$%^&*(),.?":{}|<>]',
+                      ).hasMatch(value);
 
                       if (!hasUpper || !hasLower || !hasDigit || !hasSpecial) {
                         return l.t('validation_password_requirements');
@@ -360,7 +381,9 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(4),
                             child: LinearProgressIndicator(
-                              value: _passwordStrength == 0 ? 0.05 : _passwordStrength,
+                              value: _passwordStrength == 0
+                                  ? 0.05
+                                  : _passwordStrength,
                               minHeight: 6,
                               backgroundColor: Colors.grey[300],
                               valueColor: AlwaysStoppedAnimation<Color>(color),
@@ -387,7 +410,9 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
                       ),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscureConfirmPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                          _obscureConfirmPassword
+                              ? Icons.visibility_off_rounded
+                              : Icons.visibility_rounded,
                           color: theme.iconTheme.color?.withOpacity(0.8),
                         ),
                         onPressed: () {
@@ -408,7 +433,10 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFF4285F4), width: 2),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF4285F4),
+                          width: 2,
+                        ),
                       ),
                     ),
                     validator: (value) {
@@ -482,13 +510,17 @@ class _EmailRegisterScreenState extends State<EmailRegisterScreen> {
                       Text(
                         l.t('has_account'),
                         style: TextStyle(
-                          color: theme.textTheme.bodySmall?.color
-                              ?.withOpacity(0.7),
+                          color: theme.textTheme.bodySmall?.color?.withOpacity(
+                            0.7,
+                          ),
                         ),
                       ),
                       TextButton(
                         onPressed: () {
-                          Navigator.pushReplacementNamed(context, '/email-login');
+                          Navigator.pushReplacementNamed(
+                            context,
+                            '/email-login',
+                          );
                         },
                         child: Text(
                           l.t('login_here'),
